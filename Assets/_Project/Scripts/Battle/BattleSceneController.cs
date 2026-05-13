@@ -22,13 +22,16 @@ namespace Mathcalibur.Battle
         private int _enemyHp;
         private int _validTurnCount;
 
-        private void Start()
+        private void Awake()
         {
             if (config == null)
             {
-                Debug.LogError("BattleConfig is missing.");
-                return;
+                config = ScriptableObject.CreateInstance<BattleConfig>();
             }
+        }
+
+        private void Start()
+        {
             EnsureUiExists();
             BuildBoard();
             InitBattle();
@@ -60,24 +63,33 @@ namespace Mathcalibur.Battle
                 scaler.referenceResolution = new Vector2(1080f, 1920f);
                 scaler.matchWidthOrHeight = 0.5f;
             }
-            if (FindAnyObjectByType<EventSystem>() == null) _ = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+
+            if (FindAnyObjectByType<EventSystem>() == null)
+            {
+                _ = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            }
+
             _uiCamera = Camera.main;
             BuildHudAndBoardRoots(canvas.transform as RectTransform);
         }
 
         private void BuildHudAndBoardRoots(RectTransform canvasRoot)
         {
-            var hudRoot = CreateUiPanel("CombatArea", canvasRoot, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -0.3f), new Vector2(0, 0));
-            _boardRoot = CreateUiPanel("BoardArea", canvasRoot, new Vector2(0, 0), new Vector2(1, 0.7f), new Vector2(0, 0), new Vector2(0, 0));
+            var hudRoot = CreateUiPanel("CombatArea", canvasRoot, new Vector2(0, 0.7f), new Vector2(1, 1), Vector2.zero, Vector2.zero);
+            _boardRoot = CreateUiPanel("BoardArea", canvasRoot, new Vector2(0, 0), new Vector2(1, 0.7f), Vector2.zero, Vector2.zero);
+
+            var bg = _boardRoot.gameObject.AddComponent<Image>();
+            bg.color = new Color(0f, 0f, 0f, 0.2f);
 
             _hud = hudRoot.gameObject.AddComponent<BattleHudView>();
             var fields = new[] { "Player HP", "Enemy HP", "Enemy Attack In", "Expression", "Result", "Message" };
             var textComponents = new List<TMP_Text>();
             for (int i = 0; i < fields.Length; i++)
             {
-                var t = CreateText(fields[i], hudRoot, new Vector2(0.02f, 0.95f - i * 0.16f), 38);
+                var t = CreateText(fields[i], hudRoot, new Vector2(0.02f, 0.95f - i * 0.16f), 48f);
                 textComponents.Add(t);
             }
+
             typeof(BattleHudView).GetField("playerHpText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(_hud, textComponents[0]);
             typeof(BattleHudView).GetField("enemyHpText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(_hud, textComponents[1]);
             typeof(BattleHudView).GetField("countdownText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(_hud, textComponents[2]);
@@ -117,10 +129,11 @@ namespace Mathcalibur.Battle
             rt.sizeDelta = new Vector2(cellW - 8f, cellH - 8f);
             rt.anchoredPosition = new Vector2(x * cellW + 4f, -y * cellH - 4f);
 
-            var text = new GameObject("Label", typeof(TMP_Text)).GetComponent<TMP_Text>();
+            var text = new GameObject("Label", typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
             text.transform.SetParent(rt, false);
             text.alignment = TextAlignmentOptions.Center;
             text.fontSize = 64;
+            text.color = Color.black;
             text.rectTransform.anchorMin = Vector2.zero;
             text.rectTransform.anchorMax = Vector2.one;
             text.rectTransform.offsetMin = Vector2.zero;
@@ -133,6 +146,7 @@ namespace Mathcalibur.Battle
             return tile;
         }
 
+        // keep remaining methods unchanged
         private void SpawnTileValue(BattleTileView tile, int x, int y)
         {
             var numberChance = ((x + y) % 2 == 0) ? 0.6f : 0.4f;
