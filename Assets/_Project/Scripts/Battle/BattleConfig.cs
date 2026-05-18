@@ -9,9 +9,7 @@ namespace Mathcalibur.Battle
     {
         [Header("Board")]
         [SerializeField] private int columns = 5;
-        [SerializeField] private int rows = 4;
-        [SerializeField] private float boardWidth = 1000f;
-        [SerializeField] private float boardHeight = 1200f;
+        [SerializeField] private int rows = 5;
 
         [Header("Combat")]
         [SerializeField] private int playerMaxHp = 100;
@@ -35,8 +33,6 @@ namespace Mathcalibur.Battle
 
         public int Columns => columns;
         public int Rows => rows;
-        public float BoardWidth => boardWidth;
-        public float BoardHeight => boardHeight;
         public int PlayerMaxHp => playerMaxHp;
         public int EnemyMaxHp => enemyMaxHp;
         public int EnemyAttackDamage => enemyAttackDamage;

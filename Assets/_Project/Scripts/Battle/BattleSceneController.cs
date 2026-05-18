@@ -14,6 +14,8 @@ namespace Mathcalibur.Battle
 
         private BattleTileView[,] _grid;
         private RectTransform _boardRoot;
+        private RectTransform _boardContainer;
+        private RectTransform _gameplayContainer;
         private BattleHudView _hud;
         private Camera _uiCamera;
         private readonly List<BattleTileView> _selection = new();
@@ -21,6 +23,8 @@ namespace Mathcalibur.Battle
         private int _playerHp;
         private int _enemyHp;
         private int _validTurnCount;
+        private float _cellSize;
+        private const int MaxAutoLineClearLoops = 10;
 
         private void Awake()
         {
@@ -33,8 +37,16 @@ namespace Mathcalibur.Battle
         private void Start()
         {
             EnsureUiExists();
+            Canvas.ForceUpdateCanvases();
             BuildBoard();
             InitBattle();
+        }
+
+        private void OnRectTransformDimensionsChange()
+        {
+            if (_grid == null || _boardRoot == null) return;
+            UpdateLayoutRegions();
+            RefreshBoardVisualLayout();
         }
 
         private void Update()
@@ -75,8 +87,20 @@ namespace Mathcalibur.Battle
 
         private void BuildHudAndBoardRoots(RectTransform canvasRoot)
         {
-            var hudRoot = CreateUiPanel("CombatArea", canvasRoot, new Vector2(0, 0.7f), new Vector2(1, 1), Vector2.zero, Vector2.zero);
-            _boardRoot = CreateUiPanel("BoardArea", canvasRoot, new Vector2(0, 0), new Vector2(1, 0.7f), Vector2.zero, Vector2.zero);
+            _boardContainer = CreateUiPanel("BoardContainer", canvasRoot, new Vector2(0, 0), new Vector2(1, 0), Vector2.zero, Vector2.zero);
+            var boardContainerFitter = _boardContainer.gameObject.AddComponent<AspectRatioFitter>();
+            boardContainerFitter.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
+            boardContainerFitter.aspectRatio = 1f;
+
+            _boardRoot = CreateUiPanel("BoardArea", _boardContainer, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            _gameplayContainer = CreateUiPanel("GameplayContainer", canvasRoot, new Vector2(0, 0), new Vector2(1, 1), Vector2.zero, Vector2.zero);
+            var gameplayRoot = CreateUiPanel("GameplayArea", _gameplayContainer, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var gameplayFitter = gameplayRoot.gameObject.AddComponent<AspectRatioFitter>();
+            gameplayFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            gameplayFitter.aspectRatio = 3f / 4f;
+
+            var hudRoot = CreateUiPanel("CombatArea", gameplayRoot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             var bg = _boardRoot.gameObject.AddComponent<Image>();
             bg.color = new Color(0f, 0f, 0f, 0.2f);
@@ -96,17 +120,24 @@ namespace Mathcalibur.Battle
             typeof(BattleHudView).GetField("expressionText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(_hud, textComponents[3]);
             typeof(BattleHudView).GetField("resultText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(_hud, textComponents[4]);
             typeof(BattleHudView).GetField("messageText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(_hud, textComponents[5]);
+
+            UpdateLayoutRegions();
+        }
+
+        private void UpdateLayoutRegions()
+        {
+            if (_gameplayContainer == null || _boardContainer == null) return;
+            _gameplayContainer.offsetMin = new Vector2(0f, _boardContainer.rect.height);
         }
 
         private void BuildBoard()
         {
             _grid = new BattleTileView[config.Columns, config.Rows];
-            var cellW = config.BoardWidth / config.Columns;
-            var cellH = config.BoardHeight / config.Rows;
+            _cellSize = _boardRoot.rect.width / config.Columns;
             for (var y = 0; y < config.Rows; y++)
             for (var x = 0; x < config.Columns; x++)
             {
-                var tile = CreateTile(x, y, cellW, cellH);
+                var tile = CreateTile(x, y, _cellSize);
                 SpawnTileValue(tile, x, y);
                 _grid[x, y] = tile;
             }
@@ -120,19 +151,20 @@ namespace Mathcalibur.Battle
             RefreshHud("", "-");
         }
 
-        private BattleTileView CreateTile(int x, int y, float cellW, float cellH)
+        private BattleTileView CreateTile(int x, int y, float cellSize)
         {
             var go = new GameObject($"Tile_{x}_{y}", typeof(Image), typeof(BattleTileView));
             var rt = go.GetComponent<RectTransform>();
             rt.SetParent(_boardRoot, false);
             rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
-            rt.sizeDelta = new Vector2(cellW - 8f, cellH - 8f);
-            rt.anchoredPosition = new Vector2(x * cellW + 4f, -y * cellH - 4f);
+            var tilePadding = cellSize * 0.04f;
+            rt.sizeDelta = new Vector2(cellSize - tilePadding * 2f, cellSize - tilePadding * 2f);
+            rt.anchoredPosition = new Vector2(x * cellSize + tilePadding, -y * cellSize - tilePadding);
 
             var text = new GameObject("Label", typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
             text.transform.SetParent(rt, false);
             text.alignment = TextAlignmentOptions.Center;
-            text.fontSize = 64;
+            text.fontSize = Mathf.Max(24f, cellSize * 0.35f);
             text.color = Color.black;
             text.rectTransform.anchorMin = Vector2.zero;
             text.rectTransform.anchorMax = Vector2.one;
@@ -251,11 +283,70 @@ namespace Mathcalibur.Battle
 
         private void ResolveBoard()
         {
-            foreach (var tile in _selection)
+            RemoveTiles(_selection);
+            ApplyGravityAndRefill();
+
+            for (var loop = 0; loop < MaxAutoLineClearLoops; loop++)
             {
+                var lineTiles = FindSameTypeLineTiles();
+                if (lineTiles.Count == 0) break;
+                RemoveTiles(lineTiles);
+                ApplyGravityAndRefill();
+            }
+
+            ClearSelectionVisual();
+        }
+
+        private HashSet<BattleTileView> FindSameTypeLineTiles()
+        {
+            var toClear = new HashSet<BattleTileView>();
+
+            for (var y = 0; y < config.Rows; y++)
+            {
+                var kind = _grid[0, y].Kind;
+                var isSame = true;
+                for (var x = 1; x < config.Columns; x++)
+                {
+                    if (_grid[x, y].Kind == kind) continue;
+                    isSame = false;
+                    break;
+                }
+
+                if (!isSame) continue;
+                for (var x = 0; x < config.Columns; x++) toClear.Add(_grid[x, y]);
+            }
+
+            for (var x = 0; x < config.Columns; x++)
+            {
+                var kind = _grid[x, 0].Kind;
+                var isSame = true;
+                for (var y = 1; y < config.Rows; y++)
+                {
+                    if (_grid[x, y].Kind == kind) continue;
+                    isSame = false;
+                    break;
+                }
+
+                if (!isSame) continue;
+                for (var y = 0; y < config.Rows; y++) toClear.Add(_grid[x, y]);
+            }
+
+            return toClear;
+        }
+
+        private void RemoveTiles(IEnumerable<BattleTileView> tiles)
+        {
+            foreach (var tile in tiles)
+            {
+                if (tile == null) continue;
                 _grid[tile.X, tile.Y] = null;
                 Destroy(tile.gameObject);
             }
+        }
+
+        private void ApplyGravityAndRefill()
+        {
+            _cellSize = _boardRoot.rect.width / config.Columns;
             for (var x = 0; x < config.Columns; x++)
             {
                 var writeY = config.Rows - 1;
@@ -267,21 +358,32 @@ namespace Mathcalibur.Battle
                     _grid[x, writeY] = tile;
                     writeY--;
                 }
-                var cellW = config.BoardWidth / config.Columns;
-                var cellH = config.BoardHeight / config.Rows;
+
                 for (var y = writeY; y >= 0; y--)
                 {
-                    var tile = CreateTile(x, y, cellW, cellH);
+                    var tile = CreateTile(x, y, _cellSize);
                     SpawnTileValue(tile, x, y);
                     _grid[x, y] = tile;
                 }
-                for (var y = 0; y < config.Rows; y++)
-                {
-                    _grid[x, y].SetGridPos(x, y);
-                    _grid[x, y].GetComponent<RectTransform>().anchoredPosition = new Vector2(x * cellW + 4f, -y * cellH - 4f);
-                }
             }
-            ClearSelectionVisual();
+
+            RefreshBoardVisualLayout();
+        }
+
+        private void RefreshBoardVisualLayout()
+        {
+            _cellSize = _boardRoot.rect.width / config.Columns;
+            for (var x = 0; x < config.Columns; x++)
+            for (var y = 0; y < config.Rows; y++)
+            {
+                var tile = _grid[x, y];
+                if (tile == null) continue;
+                tile.SetGridPos(x, y);
+                var rt = tile.GetComponent<RectTransform>();
+                var tilePadding = _cellSize * 0.04f;
+                rt.sizeDelta = new Vector2(_cellSize - tilePadding * 2f, _cellSize - tilePadding * 2f);
+                rt.anchoredPosition = new Vector2(x * _cellSize + tilePadding, -y * _cellSize - tilePadding);
+            }
         }
 
         private string GetExpressionString()
