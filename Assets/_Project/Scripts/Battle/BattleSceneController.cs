@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 namespace Mathcalibur.Battle
 {
@@ -25,6 +26,21 @@ namespace Mathcalibur.Battle
         private int _validTurnCount;
         private float _cellSize;
         private const int MaxAutoLineClearLoops = 10;
+
+        private const int MaxStage = 10;
+        private const int StageClearGoldReward = 100;
+
+        private RectTransform _shopOverlayRoot;
+        private RectTransform _shopPanel;
+        private TMP_Text _shopGoldText;
+        private readonly List<Button> _freeButtons = new();
+        private readonly List<Button> _paidButtons = new();
+        private readonly List<ShopSlotData> _freeSlots = new();
+        private readonly List<ShopSlotData> _paidSlots = new();
+        private bool _freePurchaseDone;
+        private bool _shopOpen;
+        private RuntimePlayerState _playerState;
+        private StageDefinition _currentStage;
 
         private void Awake()
         {
@@ -51,7 +67,7 @@ namespace Mathcalibur.Battle
 
         private void Update()
         {
-            if (_playerHp <= 0 || _enemyHp <= 0) return;
+            if (_playerHp <= 0 || _enemyHp <= 0 || _shopOpen) return;
             HandleInput();
         }
 
@@ -193,10 +209,14 @@ namespace Mathcalibur.Battle
 
         private void InitBattle()
         {
+            _playerState ??= new RuntimePlayerState();
+            if (_playerState.CurrentStage <= 0) _playerState.CurrentStage = 1;
+            _currentStage = GetStageDefinition(_playerState.CurrentStage);
             _playerHp = config.PlayerMaxHp;
-            _enemyHp = config.EnemyMaxHp;
+            _enemyHp = _currentStage.EnemyHp;
             _validTurnCount = 0;
             RefreshHud("", "-");
+            _hud.SetMessage($"Stage {_playerState.CurrentStage}: {_currentStage.EnemyName}");
         }
 
         private BattleTileView CreateTile(int x, int y, float cellSize)
@@ -314,7 +334,7 @@ namespace Mathcalibur.Battle
             }
             else _hud.SetMessage("Valid expression!");
             RefreshHud("", result.ToString());
-            if (_enemyHp <= 0) _hud.SetMessage("Victory!");
+            if (_enemyHp <= 0) OnStageCleared();
             if (_playerHp <= 0) _hud.SetMessage("Defeat!");
         }
 
@@ -476,6 +496,169 @@ namespace Mathcalibur.Battle
             _hud.SetResult(result);
         }
 
+
+        private void OnStageCleared()
+        {
+            _playerState.Gold += StageClearGoldReward;
+            if (_playerState.CurrentStage >= MaxStage)
+            {
+                _hud.SetMessage("Victory! Demon King defeated.");
+                return;
+            }
+
+            _hud.SetMessage($"Stage {_playerState.CurrentStage} clear! +{StageClearGoldReward} Gold");
+            OpenShopPanel();
+        }
+
+        private void OpenShopPanel()
+        {
+            if (_shopOverlayRoot == null) BuildShopPanel();
+            _shopOpen = true;
+            _shopOverlayRoot.gameObject.SetActive(true);
+            RollShop(true, true);
+        }
+
+        private void BuildShopPanel()
+        {
+            _shopOverlayRoot = CreateUiPanel("ShopOverlay", _boardRoot.parent as RectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var overlayImage = _shopOverlayRoot.gameObject.AddComponent<Image>();
+            overlayImage.color = new Color(0f, 0f, 0f, 0.75f);
+            overlayImage.raycastTarget = true;
+
+            _shopPanel = CreateUiPanel("ShopPanel", _shopOverlayRoot, new Vector2(0.08f, 0.14f), new Vector2(0.92f, 0.86f), Vector2.zero, Vector2.zero);
+            var panelImage = _shopPanel.gameObject.AddComponent<Image>();
+            panelImage.color = new Color(0.12f, 0.12f, 0.12f, 0.95f);
+
+            var freeRow = CreateUiPanel("FreeRow", _shopPanel, new Vector2(0.08f, 0.68f), new Vector2(0.74f, 0.92f), Vector2.zero, Vector2.zero);
+            var paidRow = CreateUiPanel("PaidRow", _shopPanel, new Vector2(0.08f, 0.38f), new Vector2(0.74f, 0.62f), Vector2.zero, Vector2.zero);
+            var controlRow = CreateUiPanel("Controls", _shopPanel, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.28f), Vector2.zero, Vector2.zero);
+
+            _shopGoldText = CreateText("Gold", _shopPanel, new Vector2(0.78f, 0.90f), 44f);
+            _shopGoldText.alignment = TextAlignmentOptions.TopLeft;
+
+            for (var i = 0; i < 3; i++)
+            {
+                _freeButtons.Add(CreateShopButton(freeRow, i, isFree: true));
+                _paidButtons.Add(CreateShopButton(paidRow, i, isFree: false));
+            }
+
+            CreateActionButton(controlRow, "Exit", new Vector2(0.12f, 0.5f), () => SceneManager.LoadScene("TitleScene"));
+            CreateActionButton(controlRow, "Reroll", new Vector2(0.5f, 0.5f), OnRerollPressed);
+            CreateActionButton(controlRow, "Next Stage", new Vector2(0.88f, 0.5f), OnNextStagePressed);
+            _shopOverlayRoot.gameObject.SetActive(false);
+        }
+
+        private Button CreateShopButton(RectTransform rowRoot, int index, bool isFree)
+        {
+            var btn = CreateActionButton(rowRoot, isFree ? "Free" : "Paid", new Vector2((index + 0.5f) / 3f, 0.5f), null);
+            btn.onClick.AddListener(() => OnShopSlotPressed(isFree, index));
+            return btn;
+        }
+
+        private Button CreateActionButton(RectTransform parent, string label, Vector2 anchor, Action callback)
+        {
+            var go = new GameObject(label + "Button", typeof(Image), typeof(Button));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(parent, false);
+            rt.anchorMin = rt.anchorMax = anchor;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(180f, 180f);
+            var img = go.GetComponent<Image>();
+            img.color = new Color(0.85f, 0.85f, 0.85f, 1f);
+            var btn = go.GetComponent<Button>();
+            if (callback != null) btn.onClick.AddListener(() => callback());
+
+            var text = CreateText(label + "Label", rt, new Vector2(0.5f, 0.5f), 30f);
+            text.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            text.rectTransform.anchorMin = text.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            text.rectTransform.sizeDelta = new Vector2(160f, 160f);
+            text.alignment = TextAlignmentOptions.Center;
+            text.text = label;
+            return btn;
+        }
+
+        private void RollShop(bool includeFree, bool includePaid)
+        {
+            if (includeFree)
+            {
+                _freePurchaseDone = false;
+                _freeSlots.Clear();
+                for (var i = 0; i < 3; i++) _freeSlots.Add(RollItemSlot(true, i));
+            }
+
+            if (includePaid)
+            {
+                _paidSlots.Clear();
+                for (var i = 0; i < 3; i++) _paidSlots.Add(RollItemSlot(false, i));
+            }
+
+            RefreshShopUi();
+        }
+
+        private ShopSlotData RollItemSlot(bool isFree, int index)
+        {
+            if (!isFree && index == 2 && (_playerState.CurrentStage == 3 || _playerState.CurrentStage == 6 || _playerState.CurrentStage == 9))
+            {
+                return new ShopSlotData(PickItem(ItemCategory.Unique), 0, true);
+            }
+
+            if (isFree)
+            {
+                var category = (ItemCategory)UnityEngine.Random.Range(0, 3);
+                return new ShopSlotData(PickItem(category), 0, true);
+            }
+
+            var paidCategory = UnityEngine.Random.value < 0.5f ? ItemCategory.Consumable : ItemCategory.Stat;
+            return new ShopSlotData(PickItem(paidCategory), 50, false);
+        }
+
+        private ShopItem PickItem(ItemCategory category) => ShopDatabase.GetRandomItem(category, _playerState.OwnedUniqueItemIds);
+
+        private void OnShopSlotPressed(bool isFree, int index) { /* simplified */ var slots = isFree ? _freeSlots : _paidSlots; if (index >= slots.Count) return; var slot = slots[index]; if (string.IsNullOrEmpty(slot.Item.Id)) return; if (!isFree && _playerState.Gold < slot.Cost) return; if (!isFree) _playerState.Gold -= slot.Cost; AcquireItem(slot.Item); if (isFree) _freePurchaseDone = true; else slots[index] = RollItemSlot(false, index); RefreshShopUi(); }
+
+        private void AcquireItem(ShopItem item)
+        {
+            switch (item.Category)
+            {
+                case ItemCategory.Unique: _playerState.OwnedUniqueItemIds.Add(item.Id); break;
+                case ItemCategory.Stat: _playerState.PurchasedStatItemIds.Add(item.Id); break;
+                case ItemCategory.Consumable: _playerState.ConsumableItemIds.Add(item.Id); break;
+            }
+        }
+
+        private void RefreshShopUi()
+        {
+            _shopGoldText.text = $"Gold: {_playerState.Gold}";
+            for (var i = 0; i < _freeButtons.Count; i++)
+            {
+                var disable = _freePurchaseDone;
+                BindSlotButton(_freeButtons[i], _freeSlots[i], disable);
+            }
+
+            for (var i = 0; i < _paidButtons.Count; i++) BindSlotButton(_paidButtons[i], _paidSlots[i], false);
+        }
+
+        private void BindSlotButton(Button button, ShopSlotData slot, bool disable)
+        {
+            var text = button.GetComponentInChildren<TextMeshProUGUI>();
+            var soldOut = string.IsNullOrEmpty(slot.Item.Id);
+            text.text = soldOut ? "Sold Out" : $"{slot.Item.Name}\n{slot.Cost}g";
+            button.interactable = !disable && !soldOut && (slot.IsFree || _playerState.Gold >= slot.Cost);
+            button.GetComponent<Image>().color = button.interactable ? new Color(0.85f, 0.85f, 0.85f, 1f) : new Color(0.35f, 0.35f, 0.35f, 1f);
+        }
+
+        private void OnRerollPressed() => RollShop(!_freePurchaseDone, true);
+
+        private void OnNextStagePressed()
+        {
+            _shopOpen = false;
+            _shopOverlayRoot.gameObject.SetActive(false);
+            _playerState.CurrentStage++;
+            InitBattle();
+        }
+
+        private StageDefinition GetStageDefinition(int stage) => StageDatabase.GetStage(stage);
+
         private static RectTransform CreateUiPanel(string name, RectTransform parent, Vector2 min, Vector2 max, Vector2 offsetMin, Vector2 offsetMax)
         {
             var go = new GameObject(name, typeof(RectTransform));
@@ -501,6 +684,20 @@ namespace Mathcalibur.Battle
             t.color = Color.white;
             t.raycastTarget = false;
             return t;
+        }
+
+        private enum ItemCategory { Consumable, Stat, Unique }
+        private readonly struct ShopSlotData { public readonly ShopItem Item; public readonly int Cost; public readonly bool IsFree; public ShopSlotData(ShopItem item, int cost, bool isFree){Item=item;Cost=cost;IsFree=isFree;} }
+        private readonly struct ShopItem { public readonly string Id; public readonly string Name; public readonly string Description; public readonly ItemCategory Category; public ShopItem(string id,string name,string description,ItemCategory category){Id=id;Name=name;Description=description;Category=category;} }
+        private sealed class RuntimePlayerState { public int CurrentStage = 1; public int Gold; public HashSet<string> OwnedUniqueItemIds = new(); public List<string> PurchasedStatItemIds = new(); public List<string> ConsumableItemIds = new(); }
+        private readonly struct StageDefinition { public readonly string EnemyName; public readonly int EnemyHp; public StageDefinition(string n,int hp){EnemyName=n;EnemyHp=hp;} }
+        private static class StageDatabase { public static StageDefinition GetStage(int stage){ string[] order={"Kobold","Orc","Golem","Kobold","Orc","Golem","Kobold","Orc","Golem","Demon King"}; var idx=Mathf.Clamp(stage-1,0,order.Length-1); return new StageDefinition(order[idx], 80 + idx*20); } }
+        private static class ShopDatabase
+        {
+            private static readonly List<ShopItem> Consumables = new(){ new("cons_hp","HP Potion","Recover HP later",ItemCategory.Consumable), new("cons_bomb","Mini Bomb","Deal burst damage later",ItemCategory.Consumable), new("cons_guard","Stone Skin","Gain shield later",ItemCategory.Consumable)};
+            private static readonly List<ShopItem> Stats = new(){ new("stat_drag","Drag Length +","Increase max drag length",ItemCategory.Stat), new("stat_atk","Power +","Increase attack output",ItemCategory.Stat), new("stat_hp","Vitality +","Increase max HP",ItemCategory.Stat)};
+            private static readonly List<ShopItem> Uniques = new(){ new("uniq_lucky7","Lucky Seven","Placeholder unique",ItemCategory.Unique), new("uniq_clock","Clockwork Eye","Placeholder unique",ItemCategory.Unique), new("uniq_orb","Void Orb","Placeholder unique",ItemCategory.Unique)};
+            public static ShopItem GetRandomItem(ItemCategory category, HashSet<string> owned){ var pool = category==ItemCategory.Consumable?Consumables:category==ItemCategory.Stat?Stats:Uniques.Where(u=>!owned.Contains(u.Id)).ToList(); if (pool.Count==0) return default; return pool[UnityEngine.Random.Range(0,pool.Count)]; }
         }
     }
 }
