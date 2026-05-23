@@ -207,12 +207,37 @@ namespace Mathcalibur.Battle
                 }
         }
 
+
+
+        private void ResetStageLocalBattleState()
+        {
+            _dragging = false;
+            ClearSelectionVisual();
+            ClearBoardTiles();
+            BuildBoard();
+            _validTurnCount = 0;
+            RefreshHud("", "-");
+            _hud.SetMessage(string.Empty);
+        }
+
+        private void ClearBoardTiles()
+        {
+            if (_grid == null) return;
+            for (var x = 0; x < _grid.GetLength(0); x++)
+                for (var y = 0; y < _grid.GetLength(1); y++)
+                {
+                    var tile = _grid[x, y];
+                    if (tile != null) Destroy(tile.gameObject);
+                    _grid[x, y] = null;
+                }
+        }
+
         private void InitBattle()
         {
             _playerState ??= new RuntimePlayerState();
             if (_playerState.CurrentStage <= 0) _playerState.CurrentStage = 1;
             _currentStage = GetStageDefinition(_playerState.CurrentStage);
-            _playerHp = config.PlayerMaxHp;
+            if (_playerHp <= 0) _playerHp = config.PlayerMaxHp;
             _enemyHp = _currentStage.EnemyHp;
             _validTurnCount = 0;
             RefreshHud("", "-");
@@ -525,16 +550,19 @@ namespace Mathcalibur.Battle
             overlayImage.color = new Color(0f, 0f, 0f, 0.75f);
             overlayImage.raycastTarget = true;
 
-            _shopPanel = CreateUiPanel("ShopPanel", _shopOverlayRoot, new Vector2(0.08f, 0.14f), new Vector2(0.92f, 0.86f), Vector2.zero, Vector2.zero);
+            _shopPanel = CreateUiPanel("ShopPanel", _shopOverlayRoot, new Vector2(0.09f, 0.16f), new Vector2(0.91f, 0.84f), Vector2.zero, Vector2.zero);
             var panelImage = _shopPanel.gameObject.AddComponent<Image>();
             panelImage.color = new Color(0.12f, 0.12f, 0.12f, 0.95f);
 
-            var freeRow = CreateUiPanel("FreeRow", _shopPanel, new Vector2(0.08f, 0.68f), new Vector2(0.74f, 0.92f), Vector2.zero, Vector2.zero);
-            var paidRow = CreateUiPanel("PaidRow", _shopPanel, new Vector2(0.08f, 0.38f), new Vector2(0.74f, 0.62f), Vector2.zero, Vector2.zero);
-            var controlRow = CreateUiPanel("Controls", _shopPanel, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.28f), Vector2.zero, Vector2.zero);
+            var freeRow = CreateUiPanel("FreeRow", _shopPanel, new Vector2(0.08f, 0.69f), new Vector2(0.92f, 0.91f), Vector2.zero, Vector2.zero);
+            var paidRow = CreateUiPanel("PaidRow", _shopPanel, new Vector2(0.08f, 0.43f), new Vector2(0.92f, 0.65f), Vector2.zero, Vector2.zero);
+            var infoRow = CreateUiPanel("InfoRow", _shopPanel, new Vector2(0.08f, 0.26f), new Vector2(0.92f, 0.38f), Vector2.zero, Vector2.zero);
+            var bottomRow = CreateUiPanel("BottomRow", _shopPanel, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.22f), Vector2.zero, Vector2.zero);
 
-            _shopGoldText = CreateText("Gold", _shopPanel, new Vector2(0.78f, 0.90f), 44f);
-            _shopGoldText.alignment = TextAlignmentOptions.TopLeft;
+            _shopGoldText = CreateText("Gold", infoRow, new Vector2(0.75f, 0.5f), 42f);
+            _shopGoldText.rectTransform.pivot = new Vector2(0f, 0.5f);
+            _shopGoldText.alignment = TextAlignmentOptions.MidlineLeft;
+            _shopGoldText.rectTransform.sizeDelta = new Vector2(380f, 120f);
 
             for (var i = 0; i < 3; i++)
             {
@@ -542,36 +570,41 @@ namespace Mathcalibur.Battle
                 _paidButtons.Add(CreateShopButton(paidRow, i, isFree: false));
             }
 
-            CreateActionButton(controlRow, "Exit", new Vector2(0.12f, 0.5f), () => SceneManager.LoadScene("TitleScene"));
-            CreateActionButton(controlRow, "Reroll", new Vector2(0.5f, 0.5f), OnRerollPressed);
-            CreateActionButton(controlRow, "Next Stage", new Vector2(0.88f, 0.5f), OnNextStagePressed);
+            CreateActionButton(infoRow, "Reroll", new Vector2(0.5f, 0.5f), OnRerollPressed, false);
+            CreateActionButton(bottomRow, "Exit", new Vector2(0.20f, 0.5f), () => SceneManager.LoadScene("TitleScene"), false);
+            CreateActionButton(bottomRow, "Next Stage", new Vector2(0.80f, 0.5f), OnNextStagePressed, false);
             _shopOverlayRoot.gameObject.SetActive(false);
         }
 
         private Button CreateShopButton(RectTransform rowRoot, int index, bool isFree)
         {
-            var btn = CreateActionButton(rowRoot, isFree ? "Free" : "Paid", new Vector2((index + 0.5f) / 3f, 0.5f), null);
+            var btn = CreateActionButton(rowRoot, isFree ? "Free" : "Paid", new Vector2((index + 0.5f) / 3f, 0.5f), null, true);
             btn.onClick.AddListener(() => OnShopSlotPressed(isFree, index));
             return btn;
         }
 
-        private Button CreateActionButton(RectTransform parent, string label, Vector2 anchor, Action callback)
+        private Button CreateActionButton(RectTransform parent, string label, Vector2 anchor, Action callback, bool circular = false)
         {
             var go = new GameObject(label + "Button", typeof(Image), typeof(Button));
             var rt = go.GetComponent<RectTransform>();
             rt.SetParent(parent, false);
             rt.anchorMin = rt.anchorMax = anchor;
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(180f, 180f);
+            var parentRect = parent.rect;
+            var unit = Mathf.Min(parentRect.width, parentRect.height);
+            var side = Mathf.Clamp(unit * (circular ? 0.55f : 0.7f), 140f, circular ? 230f : 280f);
+            var width = circular ? side : side * 1.4f;
+            var height = circular ? side : side * 0.6f;
+            rt.sizeDelta = new Vector2(width, height);
             var img = go.GetComponent<Image>();
             img.color = new Color(0.85f, 0.85f, 0.85f, 1f);
             var btn = go.GetComponent<Button>();
             if (callback != null) btn.onClick.AddListener(() => callback());
 
-            var text = CreateText(label + "Label", rt, new Vector2(0.5f, 0.5f), 30f);
+            var text = CreateText(label + "Label", rt, new Vector2(0.5f, 0.5f), circular ? 28f : 30f);
             text.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             text.rectTransform.anchorMin = text.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            text.rectTransform.sizeDelta = new Vector2(160f, 160f);
+            text.rectTransform.sizeDelta = new Vector2(width * 0.88f, height * 0.9f);
             text.alignment = TextAlignmentOptions.Center;
             text.text = label;
             return btn;
@@ -642,18 +675,33 @@ namespace Mathcalibur.Battle
         {
             var text = button.GetComponentInChildren<TextMeshProUGUI>();
             var soldOut = string.IsNullOrEmpty(slot.Item.Id);
-            text.text = soldOut ? "Sold Out" : $"{slot.Item.Name}\n{slot.Cost}g";
+            var categoryLabel = GetCategoryLabel(slot.Item.Category);
+            text.text = soldOut ? "Sold Out" : slot.IsFree ? categoryLabel : $"{categoryLabel}\n{slot.Cost}g";
             button.interactable = !disable && !soldOut && (slot.IsFree || _playerState.Gold >= slot.Cost);
             button.GetComponent<Image>().color = button.interactable ? new Color(0.85f, 0.85f, 0.85f, 1f) : new Color(0.35f, 0.35f, 0.35f, 1f);
         }
 
         private void OnRerollPressed() => RollShop(!_freePurchaseDone, true);
 
+        private static string GetCategoryLabel(ItemCategory category)
+        {
+            return category switch
+            {
+                ItemCategory.Consumable => "소모품",
+                ItemCategory.Stat => "수치형",
+                ItemCategory.Unique => "고유형",
+                _ => string.Empty
+            };
+        }
+
+
+
         private void OnNextStagePressed()
         {
             _shopOpen = false;
             _shopOverlayRoot.gameObject.SetActive(false);
             _playerState.CurrentStage++;
+            ResetStageLocalBattleState();
             InitBattle();
         }
 
