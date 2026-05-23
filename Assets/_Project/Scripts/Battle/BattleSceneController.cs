@@ -81,36 +81,74 @@ namespace Mathcalibur.Battle
                 _ = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
             }
 
-            _uiCamera = Camera.main;
+            _uiCamera = null;
             BuildHudAndBoardRoots(canvas.transform as RectTransform);
         }
 
         private void BuildHudAndBoardRoots(RectTransform canvasRoot)
         {
-            _boardContainer = CreateUiPanel("BoardContainer", canvasRoot, new Vector2(0, 0), new Vector2(1, 0), Vector2.zero, Vector2.zero);
-            var boardContainerFitter = _boardContainer.gameObject.AddComponent<AspectRatioFitter>();
+            _boardContainer = CreateUiPanel(
+                "BoardContainer",
+                canvasRoot,
+                new Vector2(0f, 0f),
+                new Vector2(1f, 0f),
+                Vector2.zero,
+                Vector2.zero
+            );
+
+            _boardContainer.pivot = new Vector2(0.5f, 0f);
+            _boardContainer.anchoredPosition = Vector2.zero;
+
+            var boardContainerFitter = _boardContainer.GetComponent<AspectRatioFitter>();
+            if (boardContainerFitter == null)
+                boardContainerFitter = _boardContainer.gameObject.AddComponent<AspectRatioFitter>();
+
             boardContainerFitter.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
             boardContainerFitter.aspectRatio = 1f;
 
-            _boardRoot = CreateUiPanel("BoardArea", _boardContainer, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-
-            _gameplayContainer = CreateUiPanel("GameplayContainer", canvasRoot, new Vector2(0, 0), new Vector2(1, 1), Vector2.zero, Vector2.zero);
-            var gameplayRoot = CreateUiPanel("GameplayArea", _gameplayContainer, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var gameplayFitter = gameplayRoot.gameObject.AddComponent<AspectRatioFitter>();
-            gameplayFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            gameplayFitter.aspectRatio = 3f / 4f;
-
-            var hudRoot = CreateUiPanel("CombatArea", gameplayRoot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            _boardRoot = CreateUiPanel(
+                "BoardArea",
+                _boardContainer,
+                Vector2.zero,
+                Vector2.one,
+                Vector2.zero,
+                Vector2.zero
+            );
 
             var bg = _boardRoot.gameObject.AddComponent<Image>();
             bg.color = new Color(0f, 0f, 0f, 0.2f);
+            bg.raycastTarget = false;
+
+            _gameplayContainer = CreateUiPanel(
+                "GameplayContainer",
+                canvasRoot,
+                new Vector2(0f, 0f),
+                new Vector2(1f, 1f),
+                Vector2.zero,
+                Vector2.zero
+            );
+
+            var gameplayBg = _gameplayContainer.gameObject.AddComponent<Image>();
+            gameplayBg.color = new Color(0f, 0f, 0f, 0f);
+            gameplayBg.raycastTarget = false;
+
+            var hudRoot = CreateUiPanel(
+                "CombatArea",
+                _gameplayContainer,
+                Vector2.zero,
+                Vector2.one,
+                Vector2.zero,
+                Vector2.zero
+            );
 
             _hud = hudRoot.gameObject.AddComponent<BattleHudView>();
+
             var fields = new[] { "Player HP", "Enemy HP", "Enemy Attack In", "Expression", "Result", "Message" };
             var textComponents = new List<TMP_Text>();
+
             for (int i = 0; i < fields.Length; i++)
             {
-                var t = CreateText(fields[i], hudRoot, new Vector2(0.02f, 0.95f - i * 0.16f), 48f);
+                var t = CreateText(fields[i], hudRoot, new Vector2(0.18f, 0.94f - i * 0.105f), 42f);
                 textComponents.Add(t);
             }
 
@@ -121,13 +159,23 @@ namespace Mathcalibur.Battle
             typeof(BattleHudView).GetField("resultText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(_hud, textComponents[4]);
             typeof(BattleHudView).GetField("messageText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(_hud, textComponents[5]);
 
+            Canvas.ForceUpdateCanvases();
             UpdateLayoutRegions();
         }
 
         private void UpdateLayoutRegions()
         {
             if (_gameplayContainer == null || _boardContainer == null) return;
-            _gameplayContainer.offsetMin = new Vector2(0f, _boardContainer.rect.height);
+
+            Canvas.ForceUpdateCanvases();
+
+            var boardHeight = _boardContainer.rect.height;
+
+            _gameplayContainer.anchorMin = new Vector2(0f, 0f);
+            _gameplayContainer.anchorMax = new Vector2(1f, 1f);
+            _gameplayContainer.pivot = new Vector2(0.5f, 0.5f);
+            _gameplayContainer.offsetMin = new Vector2(0f, boardHeight);
+            _gameplayContainer.offsetMax = Vector2.zero;
         }
 
         private void BuildBoard()
@@ -135,12 +183,12 @@ namespace Mathcalibur.Battle
             _grid = new BattleTileView[config.Columns, config.Rows];
             _cellSize = _boardRoot.rect.width / config.Columns;
             for (var y = 0; y < config.Rows; y++)
-            for (var x = 0; x < config.Columns; x++)
-            {
-                var tile = CreateTile(x, y, _cellSize);
-                SpawnTileValue(tile, x, y);
-                _grid[x, y] = tile;
-            }
+                for (var x = 0; x < config.Columns; x++)
+                {
+                    var tile = CreateTile(x, y, _cellSize);
+                    SpawnTileValue(tile, x, y);
+                    _grid[x, y] = tile;
+                }
         }
 
         private void InitBattle()
@@ -154,9 +202,16 @@ namespace Mathcalibur.Battle
         private BattleTileView CreateTile(int x, int y, float cellSize)
         {
             var go = new GameObject($"Tile_{x}_{y}", typeof(Image), typeof(BattleTileView));
+
+            var image = go.GetComponent<Image>();
+            image.raycastTarget = true;
+
             var rt = go.GetComponent<RectTransform>();
             rt.SetParent(_boardRoot, false);
-            rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot = new Vector2(0, 1);
+
             var tilePadding = cellSize * 0.04f;
             rt.sizeDelta = new Vector2(cellSize - tilePadding * 2f, cellSize - tilePadding * 2f);
             rt.anchoredPosition = new Vector2(x * cellSize + tilePadding, -y * cellSize - tilePadding);
@@ -166,15 +221,18 @@ namespace Mathcalibur.Battle
             text.alignment = TextAlignmentOptions.Center;
             text.fontSize = Mathf.Max(24f, cellSize * 0.35f);
             text.color = Color.black;
+            text.raycastTarget = false;
+
             text.rectTransform.anchorMin = Vector2.zero;
             text.rectTransform.anchorMax = Vector2.one;
             text.rectTransform.offsetMin = Vector2.zero;
             text.rectTransform.offsetMax = Vector2.zero;
 
             var tile = go.GetComponent<BattleTileView>();
-            typeof(BattleTileView).GetField("background", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(tile, go.GetComponent<Image>());
+            typeof(BattleTileView).GetField("background", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(tile, image);
             typeof(BattleTileView).GetField("label", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(tile, text);
             tile.SetGridPos(x, y);
+
             return tile;
         }
 
@@ -197,14 +255,26 @@ namespace Mathcalibur.Battle
 
         private void TryAddTileAtScreen(Vector2 pos)
         {
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_boardRoot, pos, _uiCamera, out var lp)) return;
-            foreach (var tile in _grid)
-            {
-                var rt = tile.GetComponent<RectTransform>();
-                if (!RectTransformUtility.RectangleContainsScreenPoint(rt, pos, _uiCamera)) continue;
-                TryAppendTile(tile);
+            if (_boardRoot == null || _grid == null) return;
+
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_boardRoot, pos, _uiCamera, out var localPoint))
                 return;
-            }
+
+            var rect = _boardRoot.rect;
+
+            var xPos = localPoint.x - rect.xMin;
+            var yPos = rect.yMax - localPoint.y;
+
+            if (xPos < 0f || yPos < 0f) return;
+
+            var x = Mathf.FloorToInt(xPos / _cellSize);
+            var y = Mathf.FloorToInt(yPos / _cellSize);
+
+            if (x < 0 || x >= config.Columns || y < 0 || y >= config.Rows) return;
+
+            var tile = _grid[x, y];
+            if (tile != null)
+                TryAppendTile(tile);
         }
 
         private void TryAppendTile(BattleTileView tile)
@@ -374,16 +444,16 @@ namespace Mathcalibur.Battle
         {
             _cellSize = _boardRoot.rect.width / config.Columns;
             for (var x = 0; x < config.Columns; x++)
-            for (var y = 0; y < config.Rows; y++)
-            {
-                var tile = _grid[x, y];
-                if (tile == null) continue;
-                tile.SetGridPos(x, y);
-                var rt = tile.GetComponent<RectTransform>();
-                var tilePadding = _cellSize * 0.04f;
-                rt.sizeDelta = new Vector2(_cellSize - tilePadding * 2f, _cellSize - tilePadding * 2f);
-                rt.anchoredPosition = new Vector2(x * _cellSize + tilePadding, -y * _cellSize - tilePadding);
-            }
+                for (var y = 0; y < config.Rows; y++)
+                {
+                    var tile = _grid[x, y];
+                    if (tile == null) continue;
+                    tile.SetGridPos(x, y);
+                    var rt = tile.GetComponent<RectTransform>();
+                    var tilePadding = _cellSize * 0.04f;
+                    rt.sizeDelta = new Vector2(_cellSize - tilePadding * 2f, _cellSize - tilePadding * 2f);
+                    rt.anchoredPosition = new Vector2(x * _cellSize + tilePadding, -y * _cellSize - tilePadding);
+                }
         }
 
         private string GetExpressionString()
@@ -418,8 +488,8 @@ namespace Mathcalibur.Battle
 
         private static TMP_Text CreateText(string name, RectTransform parent, Vector2 anchorPos, float fontSize)
         {
-            var go = new GameObject(name, typeof(TMP_Text));
-            var t = go.GetComponent<TMP_Text>();
+            var go = new GameObject(name, typeof(TextMeshProUGUI));
+            var t = go.GetComponent<TextMeshProUGUI>();
             var rt = t.rectTransform;
             rt.SetParent(parent, false);
             rt.anchorMin = rt.anchorMax = new Vector2(anchorPos.x, anchorPos.y);
@@ -429,6 +499,7 @@ namespace Mathcalibur.Battle
             t.alignment = TextAlignmentOptions.TopLeft;
             t.text = name;
             t.color = Color.white;
+            t.raycastTarget = false;
             return t;
         }
     }
