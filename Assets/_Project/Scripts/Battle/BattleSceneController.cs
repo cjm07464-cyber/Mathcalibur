@@ -12,6 +12,7 @@ namespace Mathcalibur.Battle
     public class BattleSceneController : MonoBehaviour
     {
         [SerializeField] private BattleConfig config;
+        [SerializeField] private KnightCharacterAnimator knightCharacter;
 
         private BattleTileView[,] _grid;
         private RectTransform _boardRoot;
@@ -53,6 +54,7 @@ namespace Mathcalibur.Battle
         private void Start()
         {
             EnsureUiExists();
+            ResolveKnightCharacter();
             Canvas.ForceUpdateCanvases();
             BuildBoard();
             InitBattle();
@@ -192,6 +194,22 @@ namespace Mathcalibur.Battle
             _gameplayContainer.pivot = new Vector2(0.5f, 0.5f);
             _gameplayContainer.offsetMin = new Vector2(0f, boardHeight);
             _gameplayContainer.offsetMax = Vector2.zero;
+        }
+
+
+        private void ResolveKnightCharacter()
+        {
+            if (knightCharacter != null) return;
+
+            var knightCharacters = FindObjectsByType<KnightCharacterAnimator>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            knightCharacter = knightCharacters.FirstOrDefault(character => character.gameObject.name == "Knight")
+                              ?? knightCharacters.FirstOrDefault();
+        }
+
+        private void PlayKnightAttack()
+        {
+            ResolveKnightCharacter();
+            knightCharacter?.PlayAttack();
         }
 
         private void BuildBoard()
@@ -348,6 +366,7 @@ namespace Mathcalibur.Battle
             }
 
             _validTurnCount++;
+            PlayKnightAttack();
             if (result >= 0) _enemyHp = Mathf.Max(0, _enemyHp - result);
             else _enemyHp = Mathf.Min(config.EnemyMaxHp, _enemyHp + Math.Abs(result));
             ResolveBoard();
