@@ -284,7 +284,7 @@ namespace Mathcalibur.Battle
         // keep remaining methods unchanged
         private void SpawnTileValue(BattleTileView tile, int x, int y)
         {
-            var numberChance = ((x + y) % 2 == 0) ? 0.6f : 0.4f;
+            var numberChance = ((x + y) % 2 == 0) ? 0.85f : 0.15f;
             if (UnityEngine.Random.value < numberChance) tile.SetNumber(PickNumber());
             else tile.SetOperator((OperatorType)UnityEngine.Random.Range(0, 3));
         }
@@ -687,9 +687,9 @@ namespace Mathcalibur.Battle
         {
             return category switch
             {
-                ItemCategory.Consumable => "소모품",
-                ItemCategory.Stat => "수치형",
-                ItemCategory.Unique => "고유형",
+                ItemCategory.Consumable => "Consumable",
+                ItemCategory.Stat => "Stat",
+                ItemCategory.Unique => "Unique",
                 _ => string.Empty
             };
         }
