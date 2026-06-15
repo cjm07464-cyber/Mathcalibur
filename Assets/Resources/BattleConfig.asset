@@ -1,0 +1,168 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b1753f7293073141963d3ca71b62a2e, type: 3}
+  m_Name: BattleConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Mathcalibur.Battle.BattleConfig
+  columns: 6
+  rows: 5
+  boardBackgroundColor: {r: 1, g: 1, b: 1, a: 1}
+  boardBackgroundSprite: {fileID: 21300000, guid: 0b49d1ead58019c42851f1bf9287cb54, type: 3}
+  boardBackgroundSpriteTint: {r: 1, g: 1, b: 1, a: 1}
+  playerMaxHp: 100
+  enemyMaxHp: 80
+  enemyAttackDamage: 10
+  enemyAttackEveryValidTurns: 3
+  enemyAttackDelaySeconds: 0.5
+  enemyAttackShakeDuration: 0.18
+  enemyAttackShakeRotationStrength: 12
+  shieldConversionRate: 1
+  defaultNumberSpawnRatio: 85
+  defaultOperatorSpawnRatio: 15
+  minExpressionLength: 3
+  maxExpressionLength: 5
+  uiFont: {fileID: 11400000, guid: aa20bd6581860ba47950a1e409ce69cc, type: 2}
+  shopFontSizeScale: 1
+  tileFontSizeScale: 1
+  tileSizeScale: 0.75
+  shopPanelTextColor: {r: 1, g: 1, b: 1, a: 1}
+  shopButtonTextColor: {r: 0, g: 0, b: 0, a: 1}
+  shopMainPanelColor: {r: 0.12, g: 0.12, b: 0.12, a: 0.95}
+  shopDimColor: {r: 0, g: 0, b: 0, a: 0.8235294}
+  shopMainPanelSprite: {fileID: 21300000, guid: a47ccd7d7446f014e8c4bd7de5328f93, type: 3}
+  shopMainPanelSide: 980
+  shopConfirmPanelColor: {r: 0.08, g: 0.08, b: 0.08, a: 0.97}
+  shopConfirmDimColor: {r: 0, g: 0, b: 0, a: 0.8235294}
+  shopConfirmPanelSprite: {fileID: 21300000, guid: a47ccd7d7446f014e8c4bd7de5328f93, type: 3}
+  shopConfirmPanelSide: 800
+  shopSlotButtonSide: 240
+  shopFreeSlotButtonStyle:
+    BackgroundSprite: {fileID: 21300000, guid: 4c3069feb74a5ac468b3d02f28fdb3ba, type: 3}
+    BackgroundColor: {r: 0, g: 0, b: 0, a: 0}
+    ContentSprite: {fileID: 21300000, guid: 4c3069feb74a5ac468b3d02f28fdb3ba, type: 3}
+    ContentColor: {r: 0, g: 0, b: 0, a: 0}
+    ContentSize: {x: 0, y: 0}
+    HideLabelWhenContentSpriteAssigned: 0
+  shopPaidSlotButtonStyle:
+    BackgroundSprite: {fileID: 21300000, guid: 178993f76c18ba04eb7b3730edcd6865, type: 3}
+    BackgroundColor: {r: 0, g: 0, b: 0, a: 0}
+    ContentSprite: {fileID: 21300000, guid: 178993f76c18ba04eb7b3730edcd6865, type: 3}
+    ContentColor: {r: 0, g: 0, b: 0, a: 0}
+    ContentSize: {x: 0, y: 0}
+    HideLabelWhenContentSpriteAssigned: 0
+  shopMainActionButtonWidth: 260
+  shopMainActionButtonHeight: 110
+  shopConfirmActionButtonWidth: 260
+  shopConfirmActionButtonHeight: 110
+  startingUniquePanelTextColor: {r: 1, g: 1, b: 1, a: 1}
+  startingUniqueButtonTextColor: {r: 0, g: 0, b: 0, a: 1}
+  startingUniqueMainPanelColor: {r: 0.1, g: 0.1, b: 0.1, a: 0.97}
+  startingUniqueMainPanelSprite: {fileID: 21300000, guid: a47ccd7d7446f014e8c4bd7de5328f93, type: 3}
+  startingUniqueButtonWidth: 280
+  startingUniqueButtonHeight: 220
+  startingUniqueSelectionButtonStyle:
+    BackgroundSprite: {fileID: 21300000, guid: 178993f76c18ba04eb7b3730edcd6865, type: 3}
+    BackgroundColor: {r: 0, g: 0, b: 0, a: 0}
+    ContentSprite: {fileID: 21300000, guid: 178993f76c18ba04eb7b3730edcd6865, type: 3}
+    ContentColor: {r: 0, g: 0, b: 0, a: 0}
+    ContentSize: {x: 0, y: 0}
+    HideLabelWhenContentSpriteAssigned: 0
+  startingUniqueConfirmPanelColor: {r: 0.08, g: 0.08, b: 0.08, a: 0.98}
+  startingUniqueConfirmPanelSprite: {fileID: 21300000, guid: a47ccd7d7446f014e8c4bd7de5328f93, type: 3}
+  startingUniqueConfirmPanelSide: 800
+  startingUniqueConfirmActionButtonWidth: 260
+  startingUniqueConfirmActionButtonHeight: 110
+  battleActionButtonWidth: 260
+  battleActionButtonHeight: 110
+  bagDimColor: {r: 0, g: 0, b: 0, a: 0.8627451}
+  percentageDimColor: {r: 0, g: 0, b: 0, a: 0.8627451}
+  autoLineClearPreviewSeconds: 0.6
+  autoLineClearSequentialSelectionInterval: 0.05
+  operatorLineClearFixedDamage: 50
+  tileFallDuration: 0.22
+  tileFallEase: 4
+  tileLandingBounceOffset: 7
+  tileLandingBounceDuration: 0.18
+  tileLandingBounceFrequency: 0
+  tileLandingBounceDampingRatio: 0.65
+  numberWeights:
+  - Value: 1
+    Weight: 20
+  - Value: 2
+    Weight: 20
+  - Value: 3
+    Weight: 20
+  - Value: 4
+    Weight: 20
+  - Value: 5
+    Weight: 9
+  - Value: 6
+    Weight: 5
+  - Value: 7
+    Weight: 3
+  - Value: 8
+    Weight: 2
+  - Value: 9
+    Weight: 1
+  operatorWeights:
+  - Value: 0
+    Weight: 45
+  - Value: 1
+    Weight: 25
+  - Value: 2
+    Weight: 20
+  - Value: 3
+    Weight: 10
+  numberTileSprites:
+  - Value: 1
+    NormalSprite: {fileID: 21300000, guid: 1eb023a7808569741853016a9c59be71, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 91b482b72bd383e4d9496421ee7b9f97, type: 3}
+  - Value: 2
+    NormalSprite: {fileID: 21300000, guid: aaa9b5c1708a1bc44b78e74dc734b99c, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: cfb1d945992c32d41aa06b0ac24d791a, type: 3}
+  - Value: 3
+    NormalSprite: {fileID: 21300000, guid: 886c3d99da784a448b783637cafe5c6c, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 527f27cbec9eba94e8d07634b076630d, type: 3}
+  - Value: 4
+    NormalSprite: {fileID: 21300000, guid: f5f6362a3d505ee42985666d4e472b90, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 783b4566325467c40817fb9c311d508f, type: 3}
+  - Value: 5
+    NormalSprite: {fileID: 21300000, guid: 43ac9df509d42bb4b97b696701627904, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: a7c7cc2bac62ea84ab354ac6b70bee73, type: 3}
+  - Value: 6
+    NormalSprite: {fileID: 21300000, guid: 94412a06939fc3f4f950c12b1de3e0da, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 15791724e094c184ebbcb8f5f371815e, type: 3}
+  - Value: 7
+    NormalSprite: {fileID: 21300000, guid: 7d740a52cd5ca804d99bd1e4f83ce365, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 655ad45184ba12d4aaf26d5e1b275dd5, type: 3}
+  - Value: 8
+    NormalSprite: {fileID: 21300000, guid: d247de8196ca8d84b968237a0ae4bd17, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: ea96a1d324fbb594a88b9181c47f032b, type: 3}
+  - Value: 9
+    NormalSprite: {fileID: 21300000, guid: 70f6fd857f8f96749bd4638bbd0369ab, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 87199d62f5cd88445a7a122d9c23e58d, type: 3}
+  - Value: 11
+    NormalSprite: {fileID: 21300000, guid: 77360d94687cbc54ea1a0d5a491e93c9, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 238fb9f46827256448552607e42fff4f, type: 3}
+  operatorTileSprites:
+  - Value: 0
+    NormalSprite: {fileID: 21300000, guid: 20bd79441f91f3b4097adf6523423959, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 1941eb031c974254a85ff1031e132306, type: 3}
+  - Value: 1
+    NormalSprite: {fileID: 21300000, guid: 4ec8efba05fb72b41b8195f16cc357ca, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: ed7f10b1a58f55f4a8addc137aacdc3c, type: 3}
+  - Value: 2
+    NormalSprite: {fileID: 21300000, guid: 4026352c6d0e56149b3297d6b5c49aef, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 27117cb1f34c8a84e85935036a7fb52e, type: 3}
+  - Value: 3
+    NormalSprite: {fileID: 21300000, guid: 36656f07bc3f5cf46bd9cdfb785dabb4, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 4a0429b7239d61d4ea0279f6a38d1ad9, type: 3}
+  showTileLabelWhenSpriteAssigned: 0

@@ -1,0 +1,263 @@
+유니크아이템 작업 전체 기록
+
+1. 작업 목적
+- Docs/Mathcalibur_UniqueItem_2026.05.27.md를 기준으로 UniqueItem 시스템을 현재 프로젝트에 연결한다.
+- 다만 사용자 합의에 따라 이번 범위는 "Normal 난이도 전용 구현"으로 간주한다.
+
+2. 문서 확인 범위
+- AGENT.md
+- Docs/Mathcalibur_Main_2026.05.27.md
+- Docs/Mathcalibur_Item_2026.05.27.md
+- Docs/Mathcalibur_UniqueItem_2026.05.27.md
+
+3. 사용자와 합의된 주요 전제
+- Normal 난이도만 구현한다고 생각하고 진행
+- Attack / Defense 모드는 토글 유지 방식
+- Unique 3은 Attack Mode에서 결과가 0 이하라도 추가 데미지를 준다
+- 기본 Defense 실드만 비교 적용하고, Unique 실드는 별도 추가 지급
+- 모호성 레벨이 높을 때만 소크라테스식 질문
+
+4. 수정 / 작업한 파일
+- Assets/_Project/Scripts/Battle/BattleSceneController.cs
+- Assets/_Project/Scripts/Battle/BattleConfig.cs
+- Assets/_Project/Scripts/Battle/BattleHudView.cs
+- Assets/_Project/Scripts/Items/ItemData.cs
+- Assets/_Project/Scripts/Items/RuntimeItemInventory.cs
+- Assets/_Project/Scripts/Items/ItemDatabase.cs
+- Assets/Resources/MathcaliburItems.json
+- Assets/Resources/BattleConfig.asset
+
+5. UniqueItem 작업 이전에 함께 정리된 관련 기반
+- 상점 아이템 클릭 시 즉시 구매되지 않도록 변경
+- 아이템 클릭 시 설명 패널 표시
+- Cancel / Purchase 버튼으로 구매 확정
+- 타일 폰트 / 상점 폰트 분리
+- 타일 사이즈 / 상점 메인 패널 / 구매 확인 패널 사이즈 분리
+- 각 버튼 크기 개별 조절 가능하도록 BattleConfig 확장
+
+6. UniqueItem 시스템을 위해 추가한 데이터 구조
+
+6-1. ItemData / effect type 확장
+- 아래 Unique 관련 effect type 추가
+  - AccumulateOneThenTransformNextExpression
+  - ProbabilityBonusDamage
+  - TrinityThreeSixNine
+  - BoardGenerationOverride
+  - ShieldPerFiveInExpression
+  - FlatStageClearGoldBonus
+  - ExactLengthSevenBonusDamage
+  - PercentStageClearGoldBonus
+  - OdinBoardWideNineTransform
+
+6-2. RuntimeItemInventory 확장
+- HasAcquiredItem(string itemId) 추가
+- 전투 중 특정 Unique 소유 여부를 빠르게 확인하기 위한 목적
+
+6-3. ItemDatabase 조정
+- unlockStage = 0 도 허용되게 조정
+- 시작 시점부터 후보가 될 수 있는 Unique 아이템 데이터 파싱 지원
+- effectPayload의 일반 key/value 값 사용 가능 상태 유지
+
+7. MathcaliburItems.json 작업
+
+7-1. TEMP 설정 키 추가
+- TEMP_UNIQUE_ITEM_PRICE
+- TEMP_UNIQUE_ITEM_MAX_ACQUISITIONS_PER_RUN
+- TEMP_STARTING_UNIQUE_CANDIDATE_COUNT
+- TEMP_UNIQUE_1_REQUIRED_ONE_COUNT
+- TEMP_UNIQUE_2_BASE_CHANCE_PERCENT
+- TEMP_UNIQUE_2_CHANCE_PER_TWO_PERCENT
+- TEMP_UNIQUE_2_MAX_CHANCE_PERCENT
+- TEMP_UNIQUE_2_BONUS_DAMAGE_PERCENT
+- TEMP_UNIQUE_3_ATTACK_BONUS_DAMAGE
+- TEMP_UNIQUE_3_ATTACK_SHIELD_BONUS
+- TEMP_UNIQUE_3_DEFENSE_SHIELD_BONUS
+- TEMP_UNIQUE_4_A_CELL_NUMBER_RATIO
+- TEMP_UNIQUE_4_A_CELL_OPERATOR_RATIO
+- TEMP_UNIQUE_4_B_CELL_NUMBER_RATIO
+- TEMP_UNIQUE_4_B_CELL_OPERATOR_RATIO
+- TEMP_UNIQUE_5_SHIELD_PER_FIVE
+- TEMP_UNIQUE_6_FLAT_GOLD_BONUS
+- TEMP_UNIQUE_7_BONUS_DAMAGE_PERCENT
+- TEMP_UNIQUE_8_GOLD_MULTIPLIER_PERCENT
+- TEMP_UNIQUE_9_TRIGGER_TURN_1
+- TEMP_UNIQUE_9_TRIGGER_TURN_2
+- TEMP_UNIQUE_9_MAX_TRANSFORM_VALUE
+- TEMP_UNIQUE_9_TARGET_VALUE
+- TEMP_UNIQUE_SLOT_NUMBER_IN_MIDDLE_ROW
+- TEMP_UNIQUE_SLOT_ZERO_BASED_INDEX_IN_MIDDLE_ROW
+- TEMP_UNIQUE_SHOP_STAGE_1
+- TEMP_UNIQUE_SHOP_STAGE_2
+- TEMP_UNIQUE_SHOP_STAGE_3
+- TEMP_STAGE_CLEAR_GOLD_1_TO_3
+- TEMP_STAGE_CLEAR_GOLD_4_TO_6
+- TEMP_STAGE_CLEAR_GOLD_7_TO_9
+
+7-2. Unique 아이템 9종 추가
+- UNIQUE_1_AWAKENED_ONE
+- UNIQUE_2_PROBABILITY_STRIKE
+- UNIQUE_3_TRINITY
+- UNIQUE_4_ORDER_OF_OPERATIONS
+- UNIQUE_5_SHIELD_NUMBER
+- UNIQUE_6_FLAT_WEALTH
+- UNIQUE_7_DAVID
+- UNIQUE_8_PERCENT_WEALTH
+- UNIQUE_9_ODINS_NINE_TRIALS
+
+8. 전투 시스템 기반 확장
+
+8-1. Combat mode 추가
+- Attack / Defense 모드 enum 추가
+- 현재 모드 표시용 UI 텍스트 추가
+- Attack / Defense 버튼으로 모드 전환
+- 토글 유지 방식으로 동작
+
+8-2. Shield 시스템 추가
+- 플레이어 실드 값 상태 추가
+- HUD에서 플레이어 HP와 함께 실드 표시
+- 적 공격 시 실드가 먼저 피해를 흡수
+- 적 공격 종료 후 실드 0 초기화
+
+8-3. BattleConfig 확장
+- Shield conversion rate 추가
+- 타일 / 상점 / 버튼 UI 스케일 관련 값 분리
+- 기존 필드와의 호환을 위해 FormerlySerializedAs 사용
+
+9. 시작 Unique 선택 구현
+- 시작 시 오버레이 패널 생성
+- Unique 후보 3개를 뽑아 버튼으로 표시
+- 사용자가 1개 선택 시 무료 획득
+- 선택 후 오버레이 닫고 전투 초기화 흐름 재진입
+- Normal 난이도 전용 가정이므로 항상 활성화된 흐름으로 취급
+
+10. Unique 상점 슬롯 구현
+- Stage 3 / 6 / 9 에서 Unique 상점 슬롯 생성
+- middle row 기준 지정 index를 Unique 슬롯으로 사용
+- eligible unique pool 에서 랜덤 1개 표시
+- 조건에 맞는 아이템이 없으면 잠금 플레이스홀더 표시
+- 유니크 가격은 데이터에서 가져오도록 연결
+
+11. 보드 생성 관련 작업
+
+11-1. Unique 4 연결
+- 타일 생성 시 숫자/연산자 비율 계산에 Unique 4 반영
+- A셀과 B셀에 대해 각각 다른 비율 적용
+- 비율 계산은
+  - numberRatio / (numberRatio + operatorRatio)
+  방식으로 수정
+- 즉 90/10, 10/90 같은 문서 값이 보다 정확하게 반영되도록 정리
+
+12. 수식 평가 / 선택 흐름 재구성
+- 기존 즉시 처리 흐름 대신 선택 컨텍스트를 구성하는 구조로 분리
+- 현재 보드에서 수식용 컨텍스트 재구성
+- 유효 수식 확정 후:
+  - valid turn 증가
+  - Unique 9 보드 변환 적용
+  - 필요 시 컨텍스트 재빌드
+  - Unique 1 준비 상태면 계산용 숫자 1 -> 11 변환
+  - 수식 결과 계산
+  - Unique 결과 후처리 계산
+  - Attack / Defense 결과 적용
+  - Unique 1 상태 업데이트
+  - 보드 해소
+  - 적 생존 시 적 공격 처리
+
+13. Unique별 구현 내용
+
+13-1. Unique 1
+- 스테이지 동안 사용한 숫자 1의 개수 추적
+- 일정 수 이상 사용하면 다음 유효 수식에서 계산용 1을 11로 변환
+- Unique 9가 먼저 보드를 바꾸면, 1이 9로 바뀐 경우 11로 되지 않도록 우선순위 정리
+
+13-2. Unique 2
+- Attack Mode에서만 동작
+- baseResult > 0 일 때만 동작
+- 수식 내 숫자 2의 개수에 따라 확률 증가
+- 최대 확률 제한 있음
+- 발동 시 base damage 비율 기반 추가 데미지
+
+13-3. Unique 3
+- 최종 숫자들에 3, 6, 9가 모두 포함되면 발동
+- Attack Mode:
+  - 추가 데미지 부여
+  - 추가 실드 부여
+- Defense Mode:
+  - 방어 실드 보너스 부여
+- 사용자 결정에 따라 결과가 0 이하인 Attack Mode에서도 추가 데미지 적용
+
+13-4. Unique 4
+- 보드 숫자/연산자 생성 비율 오버라이드
+- A/B 셀 비율을 별도 설정값으로 사용
+
+13-5. Unique 5
+- 수식 안의 숫자 5 개수에 비례해 실드 추가
+
+13-6. Unique 6
+- 스테이지 클리어 시 고정 골드 보너스 추가
+
+13-7. Unique 7
+- Attack Mode에서만 동작
+- 수식 길이가 정확히 7일 때 추가 데미지 비율 보너스
+
+13-8. Unique 8
+- 스테이지 클리어 골드에 퍼센트 배율 적용
+
+13-9. Unique 9
+- 특정 유효 턴에서 보드 전체를 검사
+- 지정 값 이하 숫자 타일을 target value 로 변환
+- 변환 후 수식 컨텍스트를 다시 구성하므로 Unique 3 / 5 계산에도 반영됨
+
+14. 실드 규칙 최종 반영
+- 기본 Defense 실드만 비교 대상
+- 기존 실드 vs 새 기본 실드 중 큰 값 유지
+- Unique 실드는 그 위에 별도 추가
+- Attack Mode에서 얻는 Unique 실드도 바로 더함
+
+예시 규칙
+- 기존 실드 40, 새 기본 실드 25, Unique 실드 10
+- 결과: max(40, 25) + 10 = 50
+
+15. Attack Mode 처리 규칙 정리
+- base result > 0:
+  - 기본 공격 데미지 적용
+- base result = 0:
+  - 기본 데미지 없음
+  - Unique 보너스 데미지는 별도 적용 가능
+- base result < 0:
+  - 적 회복 처리
+  - Unique 3 보너스 데미지는 별도 적용 가능
+
+16. 스테이지 클리어 골드 규칙 정리
+- 기존 하드코딩 제거
+- 아래 데이터 사용으로 변경
+  - stages 1~3: TEMP_STAGE_CLEAR_GOLD_1_TO_3
+  - stages 4~6: TEMP_STAGE_CLEAR_GOLD_4_TO_6
+  - stages 7~9: TEMP_STAGE_CLEAR_GOLD_7_TO_9
+- Unique 8 배율 먼저 적용
+- Unique 6 고정 보너스 나중에 적용
+
+17. HUD / UI 관련 작업
+- BattleHudView.SetHp 시그니처를 (playerHp, enemyHp, shield) 형태로 확장
+- 플레이어 실드가 화면에 보이도록 수정
+- Attack / Defense 모드 텍스트 표시
+- 시작 Unique 선택 오버레이 UI 구성
+
+18. 함께 진행된 상점 관련 작업
+- 상점 아이템 클릭 시 바로 구매되지 않도록 변경
+- 설명 패널 표시
+- item uiDescriptionKo 를 설명으로 사용
+- Cancel / Purchase 버튼으로 확정 구매
+- 리롤 / 다음 스테이지 진입 시 확인 패널 닫힘
+
+19. 알려진 제한 / 검증 상태
+- 현재 환경에 dotnet / csc / msbuild / mono 등 C# 빌드 도구가 없어 실제 컴파일 검증은 수행하지 못했다.
+- 따라서 현재 검증은 코드 구조 확인, 참조 지점 확인, 정적 점검 중심이다.
+
+20. 당시 남아 있던 점검 포인트
+- 시작 Unique 선택 후 InitBattle 재진입 흐름의 안정성 재확인 필요
+- 런타임에서만 드러나는 컴파일/참조 이슈 가능성 존재
+- Easy / Hard 난이도 분기와 TitleScene 기반 시작 UX는 아직 구현 범위 밖
+- Retry snapshot 복원 구조는 아직 별도 구현 범위로 확정하지 않음
+
+21. 한 줄 요약
+- UniqueItem 작업은 Normal 난이도 전용 전제로, 시작 Unique 선택 / Stage 3·6·9 유니크 슬롯 / Attack-Defense 모드 / Shield 시스템 / Unique 1~9 효과 연결 / 보상 및 보드 생성 규칙 반영까지 현재 프로젝트 구조에 맞춰 우선 구현한 상태다.

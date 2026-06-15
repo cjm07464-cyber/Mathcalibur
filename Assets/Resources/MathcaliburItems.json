@@ -1,0 +1,782 @@
+{
+  "intConfigs": [
+    {
+      "key": "TEMP_ACTIVE_ITEM_PRICE",
+      "value": 30
+    },
+    {
+      "key": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "value": 50
+    },
+    {
+      "key": "TEMP_PASSIVE_ITEM_PRICE",
+      "value": 50
+    },
+    {
+      "key": "TEMP_CONNECTION_LIMIT_UP_PRICE",
+      "value": 50
+    },
+    {
+      "key": "TEMP_WEIGHT_MOD_TINY_UP",
+      "value": 1
+    },
+    {
+      "key": "TEMP_WEIGHT_MOD_SMALL_UP",
+      "value": 1
+    },
+    {
+      "key": "TEMP_WEIGHT_MOD_NORMAL_UP",
+      "value": 2
+    },
+    {
+      "key": "TEMP_WEIGHT_MOD_MANY_UP",
+      "value": 4
+    },
+    {
+      "key": "TEMP_WEIGHT_MOD_LARGE_UP",
+      "value": 6
+    },
+    {
+      "key": "TEMP_WEIGHT_MOD_EXTREME_UP",
+      "value": 10
+    },
+    {
+      "key": "TEMP_WEIGHT_MOD_SMALL_DOWN",
+      "value": -2
+    },
+    {
+      "key": "TEMP_WEIGHT_MOD_NORMAL_DOWN",
+      "value": -3
+    },
+    {
+      "key": "TEMP_WEIGHT_MOD_LARGE_DOWN",
+      "value": -6
+    },
+    {
+      "key": "TEMP_WEIGHT_MOD_EXTREME_DOWN",
+      "value": -10
+    },
+    {
+      "key": "TEMP_SMALL_HEAL_AMOUNT",
+      "value": 20
+    },
+    {
+      "key": "TEMP_NEXT_ATTACK_BOOST_MULTIPLIER_PERCENT",
+      "value": 150
+    },
+    {
+      "key": "TEMP_CONNECTION_LIMIT_INCREASE_VALUE",
+      "value": 2
+    },
+    {
+      "key": "TEMP_MAX_HP_INCREASE",
+      "value": 10
+    },
+    {
+      "key": "TEMP_DEFAULT_MAX_ACQUISITIONS_PER_RUN",
+      "value": 999
+    },
+    {
+      "key": "TEMP_DEFAULT_ACTIVE_ITEM_MAX_STACK",
+      "value": 999
+    },
+    {
+      "key": "TEMP_PAID_RARITY_COMMON_WEIGHT",
+      "value": 84
+    },
+    {
+      "key": "TEMP_PAID_RARITY_RARE_WEIGHT",
+      "value": 15
+    },
+    {
+      "key": "TEMP_PAID_RARITY_LEGENDARY_WEIGHT",
+      "value": 1
+    },
+    {
+      "key": "TEMP_BASE_REROLL_COST",
+      "value": 5
+    },
+    {
+      "key": "TEMP_REROLL_COST_INCREASE",
+      "value": 3
+    },
+    {
+      "key": "TEMP_UNIQUE_ITEM_PRICE",
+      "value": 150
+    },
+    {
+      "key": "TEMP_UNIQUE_ITEM_MAX_ACQUISITIONS_PER_RUN",
+      "value": 1
+    },
+    {
+      "key": "TEMP_STARTING_UNIQUE_CANDIDATE_COUNT",
+      "value": 3
+    },
+    {
+      "key": "TEMP_UNIQUE_1_REQUIRED_ONE_COUNT",
+      "value": 10
+    },
+    {
+      "key": "TEMP_UNIQUE_2_BASE_CHANCE_PERCENT",
+      "value": 50
+    },
+    {
+      "key": "TEMP_UNIQUE_2_CHANCE_PER_TWO_PERCENT",
+      "value": 10
+    },
+    {
+      "key": "TEMP_UNIQUE_2_MAX_CHANCE_PERCENT",
+      "value": 90
+    },
+    {
+      "key": "TEMP_UNIQUE_2_BONUS_DAMAGE_PERCENT",
+      "value": 50
+    },
+    {
+      "key": "TEMP_UNIQUE_3_ATTACK_BONUS_DAMAGE",
+      "value": 30
+    },
+    {
+      "key": "TEMP_UNIQUE_3_ATTACK_SHIELD_BONUS",
+      "value": 30
+    },
+    {
+      "key": "TEMP_UNIQUE_3_DEFENSE_SHIELD_BONUS",
+      "value": 60
+    },
+    {
+      "key": "TEMP_UNIQUE_4_A_CELL_NUMBER_RATIO",
+      "value": 90
+    },
+    {
+      "key": "TEMP_UNIQUE_4_A_CELL_OPERATOR_RATIO",
+      "value": 10
+    },
+    {
+      "key": "TEMP_UNIQUE_4_B_CELL_NUMBER_RATIO",
+      "value": 10
+    },
+    {
+      "key": "TEMP_UNIQUE_4_B_CELL_OPERATOR_RATIO",
+      "value": 90
+    },
+    {
+      "key": "TEMP_UNIQUE_5_SHIELD_PER_FIVE",
+      "value": 5
+    },
+    {
+      "key": "TEMP_UNIQUE_6_FLAT_GOLD_BONUS",
+      "value": 50
+    },
+    {
+      "key": "TEMP_UNIQUE_7_BONUS_DAMAGE_PERCENT",
+      "value": 50
+    },
+    {
+      "key": "TEMP_UNIQUE_8_GOLD_MULTIPLIER_PERCENT",
+      "value": 140
+    },
+    {
+      "key": "TEMP_UNIQUE_9_TRIGGER_TURN_1",
+      "value": 9
+    },
+    {
+      "key": "TEMP_UNIQUE_9_TRIGGER_TURN_2",
+      "value": 18
+    },
+    {
+      "key": "TEMP_UNIQUE_9_MAX_TRANSFORM_VALUE",
+      "value": 6
+    },
+    {
+      "key": "TEMP_UNIQUE_9_TARGET_VALUE",
+      "value": 9
+    },
+    {
+      "key": "TEMP_UNIQUE_SLOT_NUMBER_IN_MIDDLE_ROW",
+      "value": 3
+    },
+    {
+      "key": "TEMP_UNIQUE_SLOT_ZERO_BASED_INDEX_IN_MIDDLE_ROW",
+      "value": 2
+    },
+    {
+      "key": "TEMP_UNIQUE_SHOP_STAGE_1",
+      "value": 3
+    },
+    {
+      "key": "TEMP_UNIQUE_SHOP_STAGE_2",
+      "value": 6
+    },
+    {
+      "key": "TEMP_UNIQUE_SHOP_STAGE_3",
+      "value": 9
+    },
+    {
+      "key": "TEMP_STAGE_CLEAR_GOLD_1_TO_3",
+      "value": 100
+    },
+    {
+      "key": "TEMP_STAGE_CLEAR_GOLD_4_TO_6",
+      "value": 150
+    },
+    {
+      "key": "TEMP_STAGE_CLEAR_GOLD_7_TO_9",
+      "value": 200
+    }
+  ],
+  "boolConfigs": [
+    {
+      "key": "TEMP_REQUIRE_FREE_ITEM_BEFORE_NEXT",
+      "value": true
+    }
+  ],
+  "items": [
+    {
+      "itemId": "ITEM_SMALL_CLEANUP",
+      "displayName": "작은 정리",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "number 1: TEMP_WEIGHT_MOD_SMALL_DOWN",
+      "unlockStage": 1,
+      "uiDescriptionKo": "1의 등장 확률이 조금 낮아집니다.",
+      "implementationNote": "Slightly raises the board's average number value by reducing 1."
+    },
+    {
+      "itemId": "ITEM_LOW_TWO_RESTRAINT",
+      "displayName": "낮은 수 절제",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "number 2: TEMP_WEIGHT_MOD_SMALL_DOWN",
+      "unlockStage": 1,
+      "uiDescriptionKo": "2의 등장 확률이 조금 낮아집니다.",
+      "implementationNote": "Reduces 2 slightly. May reduce some low-number stability."
+    },
+    {
+      "itemId": "ITEM_MID_NUMBER_PREFERENCE",
+      "displayName": "중간 수 선호",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "numbers 4,5,6: TEMP_WEIGHT_MOD_NORMAL_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "4, 5, 6의 등장 확률이 올라갑니다.",
+      "implementationNote": "Stable mid-number reinforcement."
+    },
+    {
+      "itemId": "ITEM_BASIC_REINFORCEMENT",
+      "displayName": "기초 보강",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "numbers 2,3,4: TEMP_WEIGHT_MOD_SMALL_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "2, 3, 4의 등장 확률이 조금 올라갑니다.",
+      "implementationNote": "Early board becomes more stable."
+    },
+    {
+      "itemId": "ITEM_ADDITION_MASTERY",
+      "displayName": "더하기 숙련",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "operator +: TEMP_WEIGHT_MOD_SMALL_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "+의 등장 확률이 조금 올라갑니다.",
+      "implementationNote": "More stable expressions, but lower damage ceiling."
+    },
+    {
+      "itemId": "ITEM_SUBTRACTION_RESTRAINT",
+      "displayName": "빼기 절제",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "operator -: TEMP_WEIGHT_MOD_SMALL_DOWN",
+      "unlockStage": 1,
+      "uiDescriptionKo": "-의 등장 확률이 조금 낮아집니다.",
+      "implementationNote": "Reduces negative-result risk."
+    },
+    {
+      "itemId": "ITEM_STABLE_OPERATIONS",
+      "displayName": "안정된 연산",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "operators +,-: TEMP_WEIGHT_MOD_MANY_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "+와 -의 등장 비율이 더 증가합니다.",
+      "implementationNote": "The phrase 더 증가 is mapped to TEMP_WEIGHT_MOD_MANY_UP."
+    },
+    {
+      "itemId": "ITEM_EVEN_REINFORCEMENT",
+      "displayName": "짝수 보강",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "numbers 2,4,6,8: TEMP_WEIGHT_MOD_TINY_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "짝수 숫자의 등장 확률이 아주 미세하게 올라갑니다.",
+      "implementationNote": "Original phrase 아주 조금 is normalized to 아주 미세하게."
+    },
+    {
+      "itemId": "ITEM_ODD_REINFORCEMENT",
+      "displayName": "홀수 보강",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "numbers 1,3,5,7: TEMP_WEIGHT_MOD_TINY_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "홀수 숫자의 등장 확률이 아주 미세하게 올라갑니다.",
+      "implementationNote": "Original phrase 아주 조금 is normalized to 아주 미세하게."
+    },
+    {
+      "itemId": "ITEM_STABLE_MULTIPLICATION",
+      "displayName": "안정된 곱셈",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "operator x: TEMP_WEIGHT_MOD_TINY_UP; numbers 2,3: TEMP_WEIGHT_MOD_TINY_UP",
+      "unlockStage": 3,
+      "uiDescriptionKo": "x와 낮은 곱셈용 숫자의 등장 확률이 아주 미세하게 올라갑니다.",
+      "implementationNote": "Locked until Stage 3 because it modifies x."
+    },
+    {
+      "itemId": "ITEM_REINFORCE_3",
+      "displayName": "3의 보강",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "number 3: TEMP_WEIGHT_MOD_SMALL_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "3의 등장 확률이 조금 올라갑니다.",
+      "implementationNote": "One of the three expanded n reinforcement items. Same implementation logic as 4 and 5."
+    },
+    {
+      "itemId": "ITEM_REINFORCE_4",
+      "displayName": "4의 보강",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "number 4: TEMP_WEIGHT_MOD_SMALL_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "4의 등장 확률이 조금 올라갑니다.",
+      "implementationNote": "One of the three expanded n reinforcement items. Same implementation logic as 3 and 5."
+    },
+    {
+      "itemId": "ITEM_REINFORCE_5",
+      "displayName": "5의 보강",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "number 5: TEMP_WEIGHT_MOD_SMALL_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "5의 등장 확률이 조금 올라갑니다.",
+      "implementationNote": "One of the three expanded n reinforcement items. Same implementation logic as 3 and 4."
+    },
+    {
+      "itemId": "ITEM_SMALL_LUCK",
+      "displayName": "작은 행운",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "operator x: TEMP_WEIGHT_MOD_TINY_UP",
+      "unlockStage": 3,
+      "uiDescriptionKo": "x의 등장 확률이 아주 미세하게 올라갑니다.",
+      "implementationNote": "Locked until Stage 3 because it modifies x."
+    },
+    {
+      "itemId": "ITEM_BEGINNER_PURIFICATION",
+      "displayName": "초급 정화",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "number 1: TEMP_WEIGHT_MOD_SMALL_DOWN; operators -,÷: TEMP_WEIGHT_MOD_SMALL_DOWN",
+      "unlockStage": 3,
+      "uiDescriptionKo": "1, -, ÷의 등장 확률이 조금 내려갑니다.",
+      "implementationNote": "Locked until Stage 3 because it modifies ÷. If too strong, design may later move this to Rare."
+    },
+    {
+      "itemId": "ITEM_HEALING_POTION",
+      "displayName": "힐링 포션",
+      "itemCategory": "ActiveItem",
+      "rarity": "Common",
+      "priceConfigKey": "TEMP_ACTIVE_ITEM_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "HealPlayer",
+      "effectPayload": "healAmount: TEMP_SMALL_HEAL_AMOUNT",
+      "unlockStage": 1,
+      "uiDescriptionKo": "전투 중 사용 시 현재 체력을 20 회복합니다. 현재 체력은 최대 체력을 초과할 수 없습니다.",
+      "implementationNote": "Stored in inventory. Manual use. Consumed even if current HP is already full."
+    },
+    {
+      "itemId": "ITEM_SEVEN_AURA",
+      "displayName": "7의 기운",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Rare",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "number 7: TEMP_WEIGHT_MOD_NORMAL_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "7의 등장 확률이 올라갑니다.",
+      "implementationNote": "Simple high-number reinforcement."
+    },
+    {
+      "itemId": "ITEM_GREEDY_MULTIPLICATION",
+      "displayName": "탐욕의 곱셈",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Rare",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "operator x: TEMP_WEIGHT_MOD_NORMAL_UP; number 1: TEMP_WEIGHT_MOD_NORMAL_UP",
+      "unlockStage": 3,
+      "uiDescriptionKo": "x의 등장 확률이 올라가지만, 1의 등장 확률도 올라갑니다.",
+      "implementationNote": "High-risk high-return. Locked until Stage 3 because it modifies x."
+    },
+    {
+      "itemId": "ITEM_INCOMPLETE_CROWN",
+      "displayName": "미완의 왕관",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Rare",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "number 9: TEMP_WEIGHT_MOD_NORMAL_UP; operator ÷: TEMP_WEIGHT_MOD_NORMAL_UP",
+      "unlockStage": 3,
+      "uiDescriptionKo": "9의 등장 확률이 올라가지만, ÷의 등장 확률도 올라갑니다.",
+      "implementationNote": "High number and division risk increase together. Locked until Stage 3."
+    },
+    {
+      "itemId": "ITEM_HIGH_NUMBER_LURE",
+      "displayName": "높은 수 유도",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Rare",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "numbers 7,8: TEMP_WEIGHT_MOD_NORMAL_UP; number 1: TEMP_WEIGHT_MOD_SMALL_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "7, 8의 등장 확률이 올라가지만, 1의 등장 확률도 조금 올라갑니다.",
+      "implementationNote": "Mid-high number reinforcement with small low-number risk."
+    },
+    {
+      "itemId": "ITEM_UNSTABLE_HIGH_NUMBERS",
+      "displayName": "불안정한 고수",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Rare",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "numbers 8,9: TEMP_WEIGHT_MOD_NORMAL_UP; operator ÷: TEMP_WEIGHT_MOD_NORMAL_UP",
+      "unlockStage": 3,
+      "uiDescriptionKo": "8, 9의 등장 확률이 올라가지만, ÷의 등장 확률도 올라갑니다.",
+      "implementationNote": "High damage potential and calculation instability. Locked until Stage 3."
+    },
+    {
+      "itemId": "ITEM_STRONG_RUNE",
+      "displayName": "강한 룬",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Rare",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "operator x: TEMP_WEIGHT_MOD_NORMAL_UP; operator -: TEMP_WEIGHT_MOD_SMALL_UP",
+      "unlockStage": 3,
+      "uiDescriptionKo": "x의 등장 확률이 올라가지만, -의 등장 확률도 조금 올라갑니다.",
+      "implementationNote": "Multiplication boost with small negative-result risk. Locked until Stage 3."
+    },
+    {
+      "itemId": "ITEM_DANGEROUS_CALCULATION",
+      "displayName": "위험한 계산",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Rare",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "operators x,÷: TEMP_WEIGHT_MOD_NORMAL_UP; operator +: TEMP_WEIGHT_MOD_NORMAL_DOWN",
+      "unlockStage": 3,
+      "uiDescriptionKo": "x와 ÷의 등장 확률이 올라가지만, +의 등장 확률이 낮아집니다.",
+      "implementationNote": "Higher ceiling, lower stability. Locked until Stage 3."
+    },
+    {
+      "itemId": "ITEM_LOW_NUMBER_DELETE",
+      "displayName": "낮은 수 삭제",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Rare",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "numbers 1,2,3: TEMP_WEIGHT_MOD_NORMAL_DOWN",
+      "unlockStage": 1,
+      "uiDescriptionKo": "1, 2, 3의 등장 확률이 낮아집니다.",
+      "implementationNote": "Raises board average but can reduce early connection stability."
+    },
+    {
+      "itemId": "ITEM_CONNECTION_LIMIT_UP",
+      "displayName": "연결 수 증가",
+      "itemCategory": "ConnectionLimitUpgrade",
+      "rarity": "Rare",
+      "priceConfigKey": "TEMP_CONNECTION_LIMIT_UP_PRICE",
+      "maxAcquisitionsPerRun": 2,
+      "effectType": "IncreaseConnectionLimit",
+      "effectPayload": "increaseValue: TEMP_CONNECTION_LIMIT_INCREASE_VALUE",
+      "unlockStage": 1,
+      "uiDescriptionKo": "현재 Run의 최대 연결 가능 타일 수가 2 증가합니다.",
+      "implementationNote": "Default flow is 5 to 7 to 9. Maximum 2 acquisitions per run."
+    },
+    {
+      "itemId": "ITEM_ATTACK_POTION",
+      "displayName": "공격 포션",
+      "itemCategory": "ActiveItem",
+      "rarity": "Rare",
+      "priceConfigKey": "TEMP_ACTIVE_ITEM_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "SetNextAttackMultiplier",
+      "effectPayload": "multiplierPercent: TEMP_NEXT_ATTACK_BOOST_MULTIPLIER_PERCENT",
+      "unlockStage": 1,
+      "uiDescriptionKo": "다음 Attack Mode 유효 수식 1회 데미지가 1.5배가 됩니다. 결과가 0 이하라도 pending 효과는 소모됩니다.",
+      "implementationNote": "Stored in inventory. Manual use. Disabled while another Attack Potion effect is pending. Does not apply to Defense Mode. Does not multiply enemy healing from negative results."
+    },
+    {
+      "itemId": "ITEM_MAX_HP_UP",
+      "displayName": "최대 체력 증가",
+      "itemCategory": "PassiveItem",
+      "rarity": "Rare",
+      "priceConfigKey": "TEMP_PASSIVE_ITEM_PRICE",
+      "maxAcquisitionsPerRun": 3,
+      "effectType": "IncreaseMaxHpAndCurrentHp",
+      "effectPayload": "increaseValue: TEMP_MAX_HP_INCREASE",
+      "unlockStage": 1,
+      "uiDescriptionKo": "최대 체력이 10 증가합니다. 획득 시 현재 체력도 10 증가합니다.",
+      "implementationNote": "Immediate survivability increase. Maximum 3 acquisitions per run."
+    },
+    {
+      "itemId": "ITEM_NINE_BLESSING",
+      "displayName": "9의 축복",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "number 9: TEMP_WEIGHT_MOD_NORMAL_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "9의 등장 확률이 올라갑니다.",
+      "implementationNote": "Legendary presentation, simple high-ceiling reinforcement. Value remains config-driven."
+    },
+    {
+      "itemId": "ITEM_KINGS_NUMBERS",
+      "displayName": "왕의 숫자",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "numbers 7,8,9: TEMP_WEIGHT_MOD_NORMAL_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "7, 8, 9의 등장 확률이 모두 올라갑니다.",
+      "implementationNote": "High-number build reinforcement."
+    },
+    {
+      "itemId": "ITEM_RUNE_PURIFICATION",
+      "displayName": "룬 정화",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "operators -,÷: TEMP_WEIGHT_MOD_NORMAL_DOWN",
+      "unlockStage": 3,
+      "uiDescriptionKo": "-와 ÷의 등장 확률이 낮아집니다.",
+      "implementationNote": "Reduces risky operators. Locked until Stage 3 because it modifies ÷."
+    },
+    {
+      "itemId": "ITEM_COMPLETE_SWORD_FORM",
+      "displayName": "완성된 검식",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "operators +,x: TEMP_WEIGHT_MOD_NORMAL_UP",
+      "unlockStage": 3,
+      "uiDescriptionKo": "+와 x의 등장 확률이 올라갑니다.",
+      "implementationNote": "Stability and damage ceiling together. Locked until Stage 3 because it modifies x."
+    },
+    {
+      "itemId": "ITEM_ADVANCED_PURIFICATION",
+      "displayName": "고급 정화",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "number 1: TEMP_WEIGHT_MOD_LARGE_DOWN; operators -,÷: TEMP_WEIGHT_MOD_LARGE_DOWN",
+      "unlockStage": 3,
+      "uiDescriptionKo": "1, -, ÷의 등장 확률이 크게 내려갑니다.",
+      "implementationNote": "Strongly removes weak/risky elements. Locked until Stage 3 because it modifies ÷."
+    },
+    {
+      "itemId": "ITEM_UNKNOWN_ONE_SURGE",
+      "displayName": "???",
+      "itemCategory": "BoardDeckUpgrade",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_BOARD_DECK_UPGRADE_PRICE",
+      "maxAcquisitionsPerRun": 999,
+      "effectType": "ModifySpawnWeights",
+      "effectPayload": "number 1: TEMP_WEIGHT_MOD_EXTREME_UP",
+      "unlockStage": 1,
+      "uiDescriptionKo": "1의 등장 확률이 극적으로 올라갑니다.",
+      "implementationNote": "The hidden display name is intentional. Strong synergy with the future 1 UniqueItem system."
+    },
+    {
+      "itemId": "UNIQUE_1_AWAKENED_ONE",
+      "displayName": "각성하는 하나",
+      "itemCategory": "UniqueItem",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
+      "maxAcquisitionsPerRun": 1,
+      "effectType": "AccumulateOneThenTransformNextExpression",
+      "effectPayload": "requiredOneCount: TEMP_UNIQUE_1_REQUIRED_ONE_COUNT",
+      "unlockStage": 0,
+      "uiDescriptionKo": "1을 10개 사용하면, 다음 유효 수식 1회 동안 1이 11로 계산됩니다.",
+      "implementationNote": "PreCalculationTransform. Starting Unique candidate and Unique Shop eligible."
+    },
+    {
+      "itemId": "UNIQUE_2_PROBABILITY_STRIKE",
+      "displayName": "두 번째 일격",
+      "itemCategory": "UniqueItem",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
+      "maxAcquisitionsPerRun": 1,
+      "effectType": "ProbabilityBonusDamage",
+      "effectPayload": "baseChancePercent: TEMP_UNIQUE_2_BASE_CHANCE_PERCENT; chancePerTwoPercent: TEMP_UNIQUE_2_CHANCE_PER_TWO_PERCENT; maxChancePercent: TEMP_UNIQUE_2_MAX_CHANCE_PERCENT; bonusDamagePercent: TEMP_UNIQUE_2_BONUS_DAMAGE_PERCENT",
+      "unlockStage": 0,
+      "uiDescriptionKo": "공격 시 확률적으로 추가 데미지를 줍니다. 수식 안의 2가 많을수록 확률이 올라갑니다.",
+      "implementationNote": "PostCalculationBonus. Positive Attack Mode only."
+    },
+    {
+      "itemId": "UNIQUE_3_TRINITY",
+      "displayName": "성부, 성자, 성령",
+      "itemCategory": "UniqueItem",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
+      "maxAcquisitionsPerRun": 1,
+      "effectType": "TrinityThreeSixNine",
+      "effectPayload": "attackBonusDamage: TEMP_UNIQUE_3_ATTACK_BONUS_DAMAGE; attackShieldBonus: TEMP_UNIQUE_3_ATTACK_SHIELD_BONUS; defenseShieldBonus: TEMP_UNIQUE_3_DEFENSE_SHIELD_BONUS",
+      "unlockStage": 0,
+      "uiDescriptionKo": "한 수식에 3, 6, 9가 모두 있으면 추가 효과가 발동합니다.",
+      "implementationNote": "PostCalculationBonus in Attack and Defense Mode."
+    },
+    {
+      "itemId": "UNIQUE_4_ORDER_OF_OPERATIONS",
+      "displayName": "사칙연산의 질서",
+      "itemCategory": "UniqueItem",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
+      "maxAcquisitionsPerRun": 1,
+      "effectType": "BoardGenerationOverride",
+      "effectPayload": "aCellNumberRatio: TEMP_UNIQUE_4_A_CELL_NUMBER_RATIO; aCellOperatorRatio: TEMP_UNIQUE_4_A_CELL_OPERATOR_RATIO; bCellNumberRatio: TEMP_UNIQUE_4_B_CELL_NUMBER_RATIO; bCellOperatorRatio: TEMP_UNIQUE_4_B_CELL_OPERATOR_RATIO",
+      "unlockStage": 0,
+      "uiDescriptionKo": "보드의 숫자/연산자 배치 리듬이 더 뚜렷해집니다.",
+      "implementationNote": "BoardGenerationOverride only. Preserves Layer 2 weights."
+    },
+    {
+      "itemId": "UNIQUE_5_SHIELD_NUMBER",
+      "displayName": "다섯 번째 방패",
+      "itemCategory": "UniqueItem",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
+      "maxAcquisitionsPerRun": 1,
+      "effectType": "ShieldPerFiveInExpression",
+      "effectPayload": "shieldPerFive: TEMP_UNIQUE_5_SHIELD_PER_FIVE",
+      "unlockStage": 0,
+      "uiDescriptionKo": "수식 안의 5 하나당 보호막을 얻습니다.",
+      "implementationNote": "PostCalculationBonus in Attack and Defense Mode."
+    },
+    {
+      "itemId": "UNIQUE_6_FLAT_WEALTH",
+      "displayName": "여섯 번째 재화",
+      "itemCategory": "UniqueItem",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
+      "maxAcquisitionsPerRun": 1,
+      "effectType": "FlatStageClearGoldBonus",
+      "effectPayload": "flatGoldBonus: TEMP_UNIQUE_6_FLAT_GOLD_BONUS",
+      "unlockStage": 0,
+      "uiDescriptionKo": "스테이지 클리어 골드가 고정량 증가합니다.",
+      "implementationNote": "RewardModifier. Applied after percent multiplier."
+    },
+    {
+      "itemId": "UNIQUE_7_DAVID",
+      "displayName": "다비드",
+      "itemCategory": "UniqueItem",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
+      "maxAcquisitionsPerRun": 1,
+      "effectType": "ExactLengthSevenBonusDamage",
+      "effectPayload": "bonusDamagePercent: TEMP_UNIQUE_7_BONUS_DAMAGE_PERCENT",
+      "unlockStage": 0,
+      "uiDescriptionKo": "길이가 정확히 7인 공격 수식이 추가 데미지를 줍니다.",
+      "implementationNote": "PostCalculationBonus. Positive Attack Mode with exact length 7."
+    },
+    {
+      "itemId": "UNIQUE_8_PERCENT_WEALTH",
+      "displayName": "여덟 번째 부",
+      "itemCategory": "UniqueItem",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
+      "maxAcquisitionsPerRun": 1,
+      "effectType": "PercentStageClearGoldBonus",
+      "effectPayload": "goldMultiplierPercent: TEMP_UNIQUE_8_GOLD_MULTIPLIER_PERCENT",
+      "unlockStage": 0,
+      "uiDescriptionKo": "스테이지 클리어 골드가 비율로 증가합니다.",
+      "implementationNote": "RewardModifier. Multiplies base gold before Unique 6."
+    },
+    {
+      "itemId": "UNIQUE_9_ODINS_NINE_TRIALS",
+      "displayName": "오딘의 9가지 시험",
+      "itemCategory": "UniqueItem",
+      "rarity": "Legendary",
+      "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
+      "maxAcquisitionsPerRun": 1,
+      "effectType": "OdinBoardWideNineTransform",
+      "effectPayload": "triggerTurnA: TEMP_UNIQUE_9_TRIGGER_TURN_1; triggerTurnB: TEMP_UNIQUE_9_TRIGGER_TURN_2; maxTransformValue: TEMP_UNIQUE_9_MAX_TRANSFORM_VALUE; targetValue: TEMP_UNIQUE_9_TARGET_VALUE",
+      "unlockStage": 0,
+      "uiDescriptionKo": "9번째와 18번째 유효 턴에 보드의 낮은 숫자들이 9로 변합니다.",
+      "implementationNote": "BoardStateTransformBeforeCalculation. Unique 9 has priority over Unique 1."
+    }
+  ]
+}

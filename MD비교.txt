@@ -1,0 +1,131 @@
+Mathcalibur 문서 대비 구현 비교 메모
+작성일: 2026-06-01
+
+비교 기준
+- AGENT.md
+- Docs/Mathcalibur_Main_2026.05.27.md
+- Docs/Mathcalibur_Item_2026.05.27.md
+- Docs/Mathcalibur_UniqueItem_2026.05.27.md
+- 실제 확인 코드: Assets/_Project/Scripts/Battle/BattleSceneController.cs, Assets/_Project/Scripts/Items/*, Assets/Resources/MathcaliburItems.json
+
+주의
+- 이 문서는 "문서와 비교했을 때 비구현 / 많이 다름 / 이상한 점"만 적음.
+- 현재진행.txt 기준으로 일부는 의도적인 Normal 전용 축약 구현이지만, 문서 기준으로는 여전히 불일치임.
+
+==================================================
+1. 난이도 시스템이 사실상 빠져 있음 (문서와 크게 다름)
+==================================================
+문서 기준
+- Main 551-590: Easy / Normal / Hard 3개 난이도 필요.
+- Main 563-582, UniqueItem 154-172: 최소한 Easy에서는 UniqueItem 시스템 전체가 꺼져야 함.
+- Main 586-588: 시작 Unique 선택은 Normal/Hard에서만 나와야 함.
+- Main 1581-1595: Stage 3/6/9 Unique Shop Layout도 Normal/Hard에서만 사용.
+
+현재 구현
+- BattleSceneController.cs 658: InitBattle()에서 항상 EnsureStartingUniqueSelection() 호출.
+- BattleSceneController.cs 1281-1311: 시작 Unique 후보 생성 로직에 difficulty 체크가 없음.
+- BattleSceneController.cs 1803-1837: Unique Shop 여부가 CurrentStage == 3/6/9 인지만 보고 결정됨.
+- 프로젝트 전체 검색 기준으로 difficulty/Difficulty 관련 런타임 코드가 사실상 없음.
+
+판정
+- 현재 구현은 문서의 "Normal/Hard에서만 Unique 활성"이 아니라, 사실상 "Normal 전용 고정"에 가까움.
+- 현재진행.txt에도 "Normal 난이도만 구현"이라고 적혀 있으므로 의도적 축약으로 보이지만, 문서 준수 관점에서는 미구현 항목임.
+
+==================================================
+2. 스테이지 턴 제한 시스템이 없음 (미구현)
+==================================================
+문서 기준
+- Main 1464-1482: 각 스테이지는 turn limit를 가져야 하고, 유효 수식만 턴을 소모하며, 남은 턴 0에서 적이 살아 있으면 패배.
+- Item 439: ActiveItem 관련 규칙도 stage turn limit 소모 흐름을 전제로 함.
+
+현재 구현
+- BattleSceneController.cs 846: 유효 수식 때 _validTurnCount 증가.
+- BattleSceneController.cs 877: _validTurnCount는 적 공격 주기 계산에만 사용.
+- BattleSceneController.cs 1225-1227: _validTurnCount는 Unique 9 트리거 판정에도 사용.
+- turn limit 감소, 남은 턴 UI, 턴 부족 패배 처리 코드는 확인되지 않음.
+
+판정
+- 문서의 핵심 전투 제약 하나가 빠져 있음.
+- 현재 _validTurnCount는 "turn limit"가 아니라 "적 공격/유니크 트리거용 카운터" 역할만 하고 있음.
+
+==================================================
+3. 적/스테이지 구성 규칙이 문서보다 매우 단순화되어 있음 (문서와 크게 다름)
+==================================================
+문서 기준
+- Main 257, 2129-2235: EnemyConfig / StageConfig 기반의 적 데이터, 스테이지 데이터, turn limit, allowed operators 등을 editable config로 관리.
+- Main 1277-1309: Stage 1~9는 3스테이지 블록마다 Orc / StoneGolem / Kobold를 랜덤 순서로 1회씩 배치.
+- Main 1297-1305: Stage 1은 StoneGolem 금지 예외가 있어야 함.
+- Main 1311-1348: Stage 구간별 적 스탯 배수 규칙, Stage 10 별도 처리 필요.
+
+현재 구현
+- BattleSceneController.cs 2220-2223: GetStageDefinition()이 StageDatabase.GetStage()로 바로 연결됨.
+- BattleSceneController.cs 2518-2527: StageDatabase가 적 순서를 하드코딩된 배열로 고정함.
+  - { "Kobold", "Orc", "Golem", "Kobold", "Orc", "Golem", "Kobold", "Orc", "Golem", "Demon King" }
+- BattleSceneController.cs 2520-2526: EnemyHpIncreasePerStage = 20 하드코딩으로 HP만 선형 증가.
+- Stage 1 예외 랜덤화, 3-stage block 랜덤 재배치, BoardDeckUpgrade 개수에 따른 7~9 배수 처리, allowed operators / stage turn limit config 연동은 보이지 않음.
+
+판정
+- 현재는 문서의 스테이지 규칙 전체가 아니라, "간단한 임시 스테이지 테이블"만 들어간 상태에 가까움.
+- 특히 Stage 1~9 적 로테이션 규칙은 문서와 다름.
+
+==================================================
+4. 시작 시 디버그 힐링 포션을 자동 지급함 (이상함 / 문서 외 편의 시스템)
+==================================================
+문서 기준
+- AGENT.md 핵심 규칙: 문서에 없는 편의 시스템을 추가하면 안 됨.
+- Main/Item/Unique 어디에도 "게임 시작 시 힐링 포션 1개 자동 지급" 규칙 없음.
+
+현재 구현
+- BattleSceneController.cs 123: Awake()에서 GrantTemporaryDebugHealingPotion() 호출.
+- BattleSceneController.cs 129-139: ITEM_HEALING_POTION을 인벤토리에 즉시 지급.
+
+판정
+- 테스트용 흔적으로 보이지만, 문서 비교 기준에서는 명백한 문서 외 동작.
+- 실제 플레이 밸런스/검증 시 결과를 왜곡할 수 있음.
+
+==================================================
+5. 상점 슬롯 수와 paid rarity safety count 일부가 하드코딩됨 (부분 구현 / 구조적으로 문서와 다름)
+==================================================
+문서 기준
+- Main 2133-2135, 2169-2180, 2228-2243: free item slot count, paid item slot count, paid rarity reroll safety count 등은 editable 값이어야 함.
+- Main 2230-2235: 여러 상점 관련 값이 TEMP config로 정의되어 있음.
+
+현재 구현
+- BattleSceneController.cs 1786, 1804: free/paid 슬롯 생성 루프가 모두 for (var i = 0; i < 3; i++) 하드코딩.
+- BattleSceneController.cs 1676 부근 UI 버튼 생성도 3칸 기준 구조.
+- BattleSceneController.cs 1863: paid rarity fallback 시도 횟수가 for (var attempt = 0; attempt < 8; attempt++) 하드코딩.
+- 반면 reroll cost 자체는 2085에서 TEMP_BASE_REROLL_COST / TEMP_REROLL_COST_INCREASE를 잘 사용 중.
+
+판정
+- 현재 문서의 "데이터/설정 기반 상점 구조"를 절반만 따른 상태.
+- 현 밸런스 값으로는 돌아가더라도, 문서가 요구한 가변 구조까지는 아직 아님.
+
+==================================================
+6. 런 상태/문서상 관리 항목이 축약되어 있음 (주의)
+==================================================
+문서 기준
+- Main 1503, 1640 등: selected difficulty 같은 런 상태를 전제로 함.
+- Main 2129-2135: DifficultyConfig / EnemyConfig / StageConfig / RewardConfig / ShopConfig / UniqueShopConfig 등 역할 분리가 명시됨.
+
+현재 구현
+- BattleSceneController.cs 2431-2435: RuntimePlayerState는 CurrentStage / Gold / RerollUsedCountThisRun만 가짐.
+- selected difficulty, stage turn limit, enemy rotation block state 등의 문서상 핵심 런 상태가 없음.
+
+판정
+- 현재 구현은 문서 전체를 담는 런 상태가 아니라, BattleScene 단일 컨트롤러 중심의 축약 상태만 유지함.
+- 1~3번 문제의 근본 원인에 가까움.
+
+==================================================
+요약
+==================================================
+가장 큰 문서 불일치 3개는 아래임.
+1) 난이도 시스템 부재로 Unique 규칙이 Normal/Hard 조건 없이 사실상 항상 켜짐
+2) 스테이지 turn limit 미구현
+3) 적/스테이지 로테이션 및 config 구조가 문서보다 크게 단순화됨
+
+그 외 이상한 점
+- 상점 슬롯 수 / rarity reroll safety count 일부 하드코딩
+
+참고
+- Unique 1~9, Unique Slot, reroll cost 증가, upcoming stage unlock check, Attack Potion과 Unique bonus 분리 등은 확인된 범위에서 문서와 크게 어긋나지 않는 부분이 있었음.
+- 하지만 이 파일은 "문제점만" 적는 용도라 별도 상세 칭찬 항목은 생략함.

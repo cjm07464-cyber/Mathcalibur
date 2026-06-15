@@ -1,0 +1,286 @@
+[상점 / 시작 아이템 UI Inspector 연결 가이드]
+
+기준 컴포넌트
+- Scene: Assets/Scenes/BattleScene.unity
+- GameObject: BattleBoardLayout
+- Component: BattleBoardLayoutReference
+- 코드 기준 파일:
+  - Assets/_Project/Scripts/Battle/BattleBoardLayoutReference.cs
+  - Assets/_Project/Scripts/Battle/BattleSceneController.cs
+
+중요
+- 이 Inspector는 BattleBoardLayout 오브젝트의 BattleBoardLayoutReference 컴포넌트에서 연결합니다.
+- 현재 BattleScene에서는 시작 Unique Item 쪽 일부만 연결되어 있고,
+  Shop UI와 ItemCategoryIcons는 대부분 비어 있습니다.
+- 비어 있어도 자동 생성되는 부분이 있지만, 직접 만든 UI를 쓰려면 아래 항목들을 연결하면 됩니다.
+
+==================================================
+1. 시작 아이템 UI (Starting Unique Item UI)
+==================================================
+Inspector 경로
+- BattleBoardLayoutReference
+  - Starting Unique Layout
+
+1-1) Overlay Root
+- 연결할 것: 시작 아이템 선택창 전체를 덮는 최상위 RectTransform
+- 추천 오브젝트: StartShop
+- 역할: 팝업 전체 On/Off
+- 주의: Overlay Root 또는 Panel Root 중 하나는 반드시 있어야 씬 배치 UI를 사용합니다.
+
+1-2) Panel Root
+- 연결할 것: 시작 아이템 내용이 들어있는 실제 패널 RectTransform
+- 추천 오브젝트: StartShop 안의 메인 패널
+- 역할: 슬롯 3개와 확인창의 부모 패널
+- 주의: Overlay Root만 넣고 Panel Root가 비어 있으면 Overlay를 패널처럼 대신 사용합니다.
+
+1-3) Item Slots (배열 3칸)
+- 3개 모두 연결 권장
+- 각 칸은 ItemSlotReference 구조입니다.
+
+각 슬롯에 연결할 항목
+(1) Button
+- 연결할 것: 해당 슬롯을 눌렀을 때 선택되는 Button
+- 예: StartShop 안의 1번/2번/3번 아이템 버튼
+- 현재 BattleScene에는 3개 버튼이 이미 연결되어 있음
+
+(2) Name Text
+- 연결할 것: 아이템 이름을 보여주는 TMP_Text
+- 현재 BattleScene에는 3칸 모두 연결되어 있음
+
+(3) Description Text
+- 연결할 것: 슬롯에서 설명까지 바로 보여주고 싶을 때 쓰는 TMP_Text
+- 현재 BattleScene: 비어 있음
+- 비워도 동작은 가능
+
+(4) Price Text
+- 연결할 것: 가격 표시 TMP_Text
+- 시작 Unique 선택은 무료라서 필수 아님
+- 현재 BattleScene: 비어 있음
+- 비워도 동작 가능
+
+(5) Category Icon Image
+- 연결할 것: 아이템 종류 아이콘을 표시할 Image
+- 현재 BattleScene에는 3칸 모두 연결되어 있음
+- 단, 아래의 Item Category Icons 스프라이트도 같이 채워야 실제 아이콘이 보입니다.
+
+1-4) Confirm Panel Root
+- 연결할 것: 슬롯 클릭 후 뜨는 확인 팝업 RectTransform
+- 역할: 선택한 아이템 상세 설명 + 결정/취소 버튼
+- 현재 BattleScene: 비어 있음
+- 비우면 코드가 확인 팝업을 자동 생성합니다.
+
+1-5) Confirm Name Text
+- 연결할 것: 확인 팝업의 아이템 이름 TMP_Text
+- 현재 BattleScene: 비어 있음
+- Confirm Panel Root를 직접 쓸 경우 같이 연결 권장
+
+1-6) Confirm Description Text
+- 연결할 것: 확인 팝업의 설명 TMP_Text
+- 현재 BattleScene: 비어 있음
+- Confirm Panel Root를 직접 쓸 경우 사실상 필수
+
+1-7) Confirm Price Text
+- 연결할 것: 확인 팝업의 가격 TMP_Text
+- 시작 Unique는 코드에서 "무료"로 표시
+- 현재 BattleScene: 비어 있음
+- 없어도 큰 문제는 없지만, 직접 만든 확인창이면 연결 권장
+
+1-8) Confirm Button
+- 연결할 것: 결정 버튼
+- 현재 BattleScene: 비어 있음
+- 비우면 자동 생성 확인창에서는 코드가 버튼을 직접 만듦
+- 직접 만든 확인창이면 연결 필요
+
+1-9) Cancel Button
+- 연결할 것: 취소 버튼
+- 현재 BattleScene: 비어 있음
+- 직접 만든 확인창이면 연결 필요
+
+정리 - 시작 아이템 최소 연결 권장
+- Overlay Root: StartShop
+- Panel Root: StartShop 내부 메인 패널
+- Item Slots 3개:
+  - Button
+  - Name Text
+  - Category Icon Image
+- Confirm Panel Root 이하 확인창은 직접 만들지 않으면 비워도 됨
+
+==================================================
+2. 상점 UI (Shop UI)
+==================================================
+Inspector 경로
+- BattleBoardLayoutReference
+  - Shop Layout
+
+2-1) Overlay Root
+- 연결할 것: 상점 전체 팝업 최상위 RectTransform
+- 추천 오브젝트: Shop
+- 역할: 상점 전체 On/Off
+- 현재 BattleScene: 비어 있음
+
+2-2) Panel Root
+- 연결할 것: 상점 실제 메인 패널 RectTransform
+- 추천 오브젝트: Shop 안의 메인 패널
+- 역할: 무료 슬롯/유료 슬롯/골드/버튼/확인창 부모
+- 현재 BattleScene: 비어 있음
+
+2-3) Free Item Slots (배열 3칸)
+- 무료 아이템 3칸 연결
+- 각 칸마다 아래 5개 연결
+
+(1) Button
+- 연결할 것: 무료 슬롯 버튼
+
+(2) Name Text
+- 연결할 것: 아이템 이름 TMP_Text
+
+(3) Description Text
+- 연결할 것: 슬롯에 설명까지 보여줄 경우 TMP_Text
+- 비워도 동작 가능
+
+(4) Price Text
+- 연결할 것: 가격 TMP_Text
+- 무료 칸은 보통 "무료" 또는 0 표시에 사용
+- 연결 권장
+
+(5) Category Icon Image
+- 연결할 것: 아이템 종류 아이콘 Image
+
+2-4) Paid Item Slots (배열 3칸)
+- 유료 아이템 3칸 연결
+- 각 칸마다 아래 5개 연결
+  - Button
+  - Name Text
+  - Description Text (선택)
+  - Price Text (권장)
+  - Category Icon Image
+
+2-5) Gold Text
+- 연결할 것: 현재 골드를 표시할 TMP_Text
+- 표시 예시: Gold: 100
+- 현재 BattleScene: 비어 있음
+
+2-6) Reroll Button
+- 연결할 것: 새로고침 버튼
+- 현재 BattleScene: 비어 있음
+- 연결 시 클릭 이벤트는 코드가 자동으로 다시 바인딩함
+
+2-7) Exit Button
+- 연결할 것: 타이틀로 나가는 버튼
+- 현재 BattleScene: 비어 있음
+- 선택 항목이지만, 없으면 상점 UI 안에서 바로 나가는 버튼이 없어질 수 있음
+
+2-8) Next Stage Button
+- 연결할 것: 다음 스테이지로 넘어가는 버튼
+- 현재 BattleScene: 비어 있음
+- 연결 권장
+
+2-9) Confirm Panel Root
+- 연결할 것: 상점 슬롯 클릭 후 뜨는 구매 확인 팝업 RectTransform
+- 현재 BattleScene: 비어 있음
+- 비우면 코드가 자동 생성
+
+2-10) Confirm Name Text
+- 연결할 것: 구매 확인창 이름 TMP_Text
+
+2-11) Confirm Description Text
+- 연결할 것: 구매 확인창 설명 TMP_Text
+
+2-12) Confirm Price Text
+- 연결할 것: 구매 확인창 가격 TMP_Text
+
+2-13) Purchase Button
+- 연결할 것: 구매 버튼
+
+2-14) Cancel Button
+- 연결할 것: 취소 버튼
+
+정리 - 상점 최소 연결 권장
+- Overlay Root: Shop
+- Panel Root: Shop 내부 메인 패널
+- Free Item Slots 3개:
+  - Button / Name Text / Price Text / Category Icon Image
+- Paid Item Slots 3개:
+  - Button / Name Text / Price Text / Category Icon Image
+- Gold Text
+- Reroll Button
+- Next Stage Button
+- Confirm Panel Root 이하 확인창은 직접 만들지 않으면 비워도 됨
+
+==================================================
+3. 아이템 카테고리 아이콘 (Item Category Icons)
+==================================================
+Inspector 경로
+- BattleBoardLayoutReference
+  - Item Category Icons
+
+여기는 Image 컴포넌트를 넣는 곳이 아니라 Sprite를 넣는 곳입니다.
+슬롯의 Category Icon Image에 표시될 원본 스프라이트를 연결합니다.
+
+3-1) 기본 카테고리 아이콘
+- Active Item Icon: 액티브 아이템 스프라이트
+- Passive Item Icon: 패시브 아이템 스프라이트
+- Board Deck Upgrade Icon: 보드/덱 업그레이드 스프라이트
+- Connection Limit Upgrade Icon: 연결 수 업그레이드 스프라이트
+
+3-2) Unique Item 1~9
+- Unique Item 1 Icon ~ Unique Item 9 Icon
+- itemId가 UNIQUE_1 ~ UNIQUE_9인 아이템과 매칭됩니다.
+- 예:
+  - UNIQUE_1 -> Unique Item 1 Icon
+  - UNIQUE_2 -> Unique Item 2 Icon
+  - ...
+  - UNIQUE_9 -> Unique Item 9 Icon
+
+현재 BattleScene 상태
+- Item Category Icons 항목 전체가 비어 있음
+- 따라서 StartShop 슬롯의 Category Icon Image가 연결되어 있어도 실제 스프라이트는 안 보일 수 있음
+
+==================================================
+4. 꼭 알아둘 동작 규칙
+==================================================
+- Starting Unique Layout에서 Overlay Root / Panel Root가 둘 다 비어 있으면:
+  -> 코드가 시작 아이템 UI 전체를 자동 생성
+
+- Shop Layout에서 Overlay Root / Panel Root가 둘 다 비어 있으면:
+  -> 코드가 상점 UI 전체를 자동 생성
+
+- Confirm Panel Root가 비어 있으면:
+  -> 해당 확인 팝업은 코드가 자동 생성
+
+- 슬롯 내부 Name/Description/Price/Icon은 일부 비어 있어도 에러 없이 넘어가도록 작성되어 있음
+  -> 하지만 비워둔 부분은 화면 표시가 안 됨
+
+==================================================
+5. 현재 BattleScene 기준 빠른 체크리스트
+==================================================
+이미 연결된 것
+- BattleBoardLayoutReference 존재
+- Starting Unique Layout > Item Slots 3개 Button 연결됨
+- Starting Unique Layout > Item Slots 3개 Name Text 연결됨
+- Starting Unique Layout > Item Slots 3개 Category Icon Image 연결됨
+
+비어 있는 것
+- Starting Unique Layout > Overlay Root
+- Starting Unique Layout > Panel Root
+- Starting Unique Layout > Confirm Panel 관련 전체
+- Shop Layout 전체 대부분
+- Item Category Icons 전체
+
+추천 작업 순서
+1) StartShop를 Overlay Root로 연결
+2) StartShop 내부 실제 패널을 Panel Root로 연결
+3) Shop를 Overlay Root로 연결
+4) Shop 내부 실제 메인 패널을 Panel Root로 연결
+5) Shop의 무료 3칸 / 유료 3칸 각각 Button, Name, Price, Icon 연결
+6) Gold Text / Reroll / Exit / Next Stage 버튼 연결
+7) 필요하면 구매 확인창(Confirm Panel) 연결
+8) 마지막으로 Item Category Icons 스프라이트 전부 연결
+
+==================================================
+6. 한 줄 요약
+==================================================
+- Button/TMP_Text/Image는 각 슬롯/버튼 UI 오브젝트를 연결
+- Item Category Icons는 Sprite 에셋을 연결
+- Overlay Root/Panel Root가 비면 자동 생성 모드로 동작
+- 직접 만든 상점/시작 아이템 UI를 쓰려면 Shop / StartShop 계층을 위 항목대로 채우면 됩니다.

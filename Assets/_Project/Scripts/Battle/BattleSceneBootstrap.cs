@@ -6,9 +6,21 @@ namespace Mathcalibur.Battle
     public static class BattleSceneBootstrap
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void EnsureBootstrapExists()
+        private static void Initialize()
         {
-            var scene = SceneManager.GetActiveScene();
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            EnsureBootstrapExists(SceneManager.GetActiveScene());
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            EnsureBootstrapExists(scene);
+        }
+
+        private static void EnsureBootstrapExists(Scene scene)
+        {
+            
             if (scene.name != "BattleScene") return;
 
             if (Object.FindAnyObjectByType<BattleSceneController>() != null) return;
