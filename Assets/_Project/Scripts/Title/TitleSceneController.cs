@@ -1,3 +1,4 @@
+using Mathcalibur.Audio;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -44,6 +45,7 @@ namespace Mathcalibur.Title
 
         private void Awake()
         {
+            GameAudioManager.Instance?.PlayTitleBgm();
             BindButton(startGameButton, OpenLevelPanel);
             BindButton(quitGameButton, QuitGame);
             BindButton(easyButton, () => SelectDifficulty(GameDifficulty.Easy));
@@ -164,7 +166,11 @@ namespace Mathcalibur.Title
             }
 
             button.onClick.RemoveAllListeners();
-            button.onClick.AddListener(callback);
+            button.onClick.AddListener(() =>
+            {
+                GameAudioManager.Instance?.PlayButtonClickSfx();
+                callback?.Invoke();
+            });
         }
     }
 }

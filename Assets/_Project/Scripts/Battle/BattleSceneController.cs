@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Mathcalibur.Audio;
 using Mathcalibur.Items;
 using Mathcalibur.Title;
 using TMPro;
@@ -14,6 +15,12 @@ using UnityEngine.UI;
 
 namespace Mathcalibur.Battle
 {
+    public enum CombatMode
+    {
+        Attack,
+        Defense,
+    }
+
     public class BattleSceneController : MonoBehaviour, IItemEffectRuntime
     {
         [SerializeField] private BattleConfig config;
@@ -42,6 +49,7 @@ namespace Mathcalibur.Battle
         private readonly ItemEffectResolver _itemEffectResolver = new();
 
         private bool _dragging;
+        private bool _enemyDeathHandledThisStage;
         private int _playerHp;
         private int _enemyHp;
         private int _playerShield;
@@ -198,6 +206,7 @@ namespace Mathcalibur.Battle
             ResolveBoardLayoutReference();
             BuildBoard();
             ResolveAutoLineClears(false);
+            GameAudioManager.Instance?.PlayBattleBgm();
             InitBattle();
             StartCoroutine(ValidateBattleSceneStartup());
         }
@@ -1377,6 +1386,8 @@ namespace Mathcalibur.Battle
             _unique1TransformReady = false;
             _playerShield = 0;
             _currentCombatMode = CombatMode.Attack;
+            _enemyDeathHandledThisStage = false;
+            battleAnimationManager?.SetPlayerCombatMode(_currentCombatMode);
             RebuildCachedSpawnWeights();
             RefreshHud(string.Empty, "-");
             _hud.SetMessage($"Stage {_playerState.CurrentStage}: {_currentStage.EnemyName}");
@@ -1611,6 +1622,7 @@ namespace Mathcalibur.Battle
 
             _selection.Add(tile);
             tile.SetSelected(true);
+            GameAudioManager.Instance?.PlayTileSelectSfx();
             RefreshHud(GetExpressionString(), "-");
         }
 
@@ -1619,6 +1631,7 @@ namespace Mathcalibur.Battle
             if (!TryBuildSelectionContext(out var context, out var error))
             {
                 _hud.SetMessage($"Invalid: {error}");
+                GameAudioManager.Instance?.PlayInvalidSelectionSfx();
                 ClearSelectionVisual();
                 RefreshHud(string.Empty, "-");
                 return;
@@ -1644,6 +1657,7 @@ namespace Mathcalibur.Battle
             if (!TryCalculateExpression(context.CalculationNumbers, context.Operators, out var baseResult, out error))
             {
                 _hud.SetMessage($"Invalid: {error}");
+                GameAudioManager.Instance?.PlayInvalidSelectionSfx();
                 ClearSelectionVisual();
                 RefreshHud(string.Empty, "-");
                 return;
@@ -1655,29 +1669,30 @@ namespace Mathcalibur.Battle
             ApplyCombatResult(baseResult, uniqueOutcome);
             var dealtDamage = Mathf.Max(0, enemyHpBefore - _enemyHp);
 
-            if (_currentCombatMode == CombatMode.Attack && dealtDamage > 0)
-            {
-                battleAnimationManager?.PlayAttackByDamage(dealtDamage);
-            }
+            GameAudioManager.Instance?.PlayExpressionConfirmSfx();
 
             UpdateUnique1State(context, consumedUnique1Ready);
 
             var resultText = $"{baseResult}";
             var shouldEnemyAttack = _enemyHp > 0 && _validTurnCount % config.EnemyAttackEveryValidTurns == 0;
-            StartCoroutine(ResolveBoardAfterSelection(resultText, uniqueOutcome.Message, shouldEnemyAttack));
+            StartCoroutine(ResolveBoardAfterSelection(resultText, uniqueOutcome.Message, shouldEnemyAttack, dealtDamage));
         }
 
-        private IEnumerator ResolveBoardAfterSelection(string resultText, string resultMessage, bool shouldEnemyAttack)
+        private IEnumerator ResolveBoardAfterSelection(string resultText, string resultMessage, bool shouldEnemyAttack, int dealtDamage)
         {
             _isResolvingTurn = true;
+            if (_currentCombatMode == CombatMode.Attack && dealtDamage > 0 && battleAnimationManager != null)
+            {
+                yield return battleAnimationManager.PlayAttackByDamageRoutine(dealtDamage);
+            }
+
             yield return ResolveBoard();
 
             RefreshHud(string.Empty, resultText);
             _hud.SetMessage(BuildBoardResolutionMessage(resultMessage));
             if (_enemyHp <= 0)
             {
-                _isResolvingTurn = false;
-                OnStageCleared();
+                yield return HandleEnemyDeathThenStageClear();
                 yield break;
             }
 
@@ -1712,12 +1727,25 @@ namespace Mathcalibur.Battle
                 yield break;
             }
 
-            var damageAfterShield = Mathf.Max(0, config.EnemyAttackDamage - _playerShield);
-            _playerShield = 0;
-            _playerHp = Mathf.Max(0, _playerHp - damageAfterShield);
-            TriggerEnemyAttackCameraShake(damageAfterShield > 0);
-            RefreshHud(string.Empty, resultText);
-            _hud.SetMessage(damageAfterShield > 0 ? $"Enemy attacked for {damageAfterShield}!" : "Enemy attack was blocked by shield!");
+            var damageAfterShield = 0;
+            void ApplyEnemyAttackDamage()
+            {
+                damageAfterShield = Mathf.Max(0, config.EnemyAttackDamage - _playerShield);
+                _playerShield = 0;
+                _playerHp = Mathf.Max(0, _playerHp - damageAfterShield);
+                TriggerEnemyAttackCameraShake(damageAfterShield > 0);
+                RefreshHud(string.Empty, resultText);
+                _hud.SetMessage(damageAfterShield > 0 ? $"Enemy attacked for {damageAfterShield}!" : "Enemy attack was blocked by shield!");
+            }
+
+            if (battleAnimationManager != null)
+            {
+                yield return battleAnimationManager.PlayEnemyAttackRoutine(ApplyEnemyAttackDamage);
+            }
+            else
+            {
+                ApplyEnemyAttackDamage();
+            }
 
             if (_playerHp <= 0)
             {
@@ -2075,6 +2103,7 @@ namespace Mathcalibur.Battle
             }
 
             _currentCombatMode = mode;
+            battleAnimationManager?.SetPlayerCombatMode(mode);
             RefreshCombatModeButtons();
             RefreshHud(GetExpressionString(), "-");
             _hud.SetMessage(mode == CombatMode.Attack ? "Attack Mode" : "Defense Mode");
@@ -2858,6 +2887,23 @@ namespace Mathcalibur.Battle
 
             _enemyHp = 0;
             RefreshHud(string.Empty, "-");
+            StartCoroutine(HandleEnemyDeathThenStageClear());
+        }
+
+        private IEnumerator HandleEnemyDeathThenStageClear()
+        {
+            if (_enemyDeathHandledThisStage)
+            {
+                yield break;
+            }
+
+            _enemyDeathHandledThisStage = true;
+            if (battleAnimationManager != null)
+            {
+                yield return battleAnimationManager.PlayEnemyDeathRoutine();
+            }
+
+            _isResolvingTurn = false;
             OnStageCleared();
         }
 
@@ -3483,7 +3529,11 @@ namespace Mathcalibur.Battle
             button.onClick.RemoveAllListeners();
             if (callback != null)
             {
-                button.onClick.AddListener(() => callback());
+                button.onClick.AddListener(() =>
+                {
+                    GameAudioManager.Instance?.PlayButtonClickSfx();
+                    callback();
+                });
             }
         }
 
@@ -3536,7 +3586,11 @@ namespace Mathcalibur.Battle
             var button = go.GetComponent<Button>();
             if (callback != null)
             {
-                button.onClick.AddListener(() => callback());
+                button.onClick.AddListener(() =>
+                {
+                    GameAudioManager.Instance?.PlayButtonClickSfx();
+                    callback();
+                });
             }
 
             var refs = go.GetComponent<BattleButtonVisualRefs>();
@@ -4568,12 +4622,6 @@ namespace Mathcalibur.Battle
             public int BonusDamage { get; }
             public int ShieldBonus { get; }
             public string Message { get; }
-        }
-
-        private enum CombatMode
-        {
-            Attack,
-            Defense,
         }
 
         private readonly struct ShopSelectionContext
