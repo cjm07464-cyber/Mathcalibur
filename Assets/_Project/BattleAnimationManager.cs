@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Mathcalibur.Battle;
 using UnityEngine;
 
 public enum BattleAttackMotionType
@@ -7,6 +9,19 @@ public enum BattleAttackMotionType
     Light,
     Medium,
     Heavy
+}
+
+public enum AnimationPlaybackMode
+{
+    Trigger,
+    PlayState
+}
+
+public enum EnemyHitPlaybackModeOverride
+{
+    UseManagerDefault,
+    Trigger,
+    PlayState
 }
 
 [System.Serializable]
@@ -40,6 +55,20 @@ public class AttackVfxEvent
 }
 
 [System.Serializable]
+public class HitReactionEvent
+{
+    public string eventName = "Hit";
+    [Min(0f)] public float delay = 0.35f;
+    public string enemyHitStateNameOverride;
+    public string enemyHitTriggerNameOverride;
+    public EnemyHitPlaybackModeOverride enemyHitPlaybackModeOverride = EnemyHitPlaybackModeOverride.UseManagerDefault;
+    public GameObject hitVfxPrefab;
+    public Transform hitVfxSpawnPointOverride;
+    public float hitVfxLifeTime = 2f;
+    public AudioClip hitSfx;
+}
+
+[System.Serializable]
 public class AttackAnimationProfile
 {
     [Header("Player Animation")]
@@ -47,6 +76,10 @@ public class AttackAnimationProfile
 
     [Header("Enemy Hit Timing")]
     public float[] enemyHitDelays = new float[] { 0.35f };
+
+    [Header("Enemy Hit Reaction Events")]
+    [Tooltip("비어 있으면 기존 Enemy Hit Delays + Hit VFX/SFX를 사용합니다.")]
+    public HitReactionEvent[] hitReactionEvents;
 
     [Header("Attack VFX Events")]
     [Tooltip("공격 중 나올 VFX 목록. 약/중/강마다 다른 프리팹, 타이밍, 스폰 위치를 지정할 수 있음")]
@@ -91,6 +124,7 @@ public class BattleAnimationManager : MonoBehaviour
         public int Order;
         public TimelineEventType Type;
         public AttackVfxEvent AttackVfxEvent;
+        public HitReactionEvent HitReactionEvent;
 
         public static TimelineEvent CreateAttackVfx(float time, AttackVfxEvent attackVfxEvent)
         {
@@ -103,13 +137,14 @@ public class BattleAnimationManager : MonoBehaviour
             };
         }
 
-        public static TimelineEvent CreateEnemyHit(float time)
+        public static TimelineEvent CreateEnemyHit(float time, HitReactionEvent hitReactionEvent = null)
         {
             return new TimelineEvent
             {
                 Time = time,
                 Order = 1,
-                Type = TimelineEventType.EnemyHit
+                Type = TimelineEventType.EnemyHit,
+                HitReactionEvent = hitReactionEvent
             };
         }
     }
@@ -149,6 +184,39 @@ public class BattleAnimationManager : MonoBehaviour
 
     [SerializeField] private string enemyHitTriggerName = "Hit";
 
+    [Header("Enemy Attack Animation")]
+    [SerializeField] private string enemyAttackTriggerName;
+    [SerializeField] private string enemyAttackStateName;
+    [SerializeField] private AnimationPlaybackMode enemyAttackPlaybackMode = AnimationPlaybackMode.Trigger;
+    [SerializeField] private AudioClip enemyAttackStartSfx;
+    [SerializeField] private GameObject enemyAttackVfxPrefab;
+    [SerializeField] private Transform enemyAttackVfxSpawnPoint;
+    [SerializeField, Min(0f)] private float playerHitDelay = 0.35f;
+    [SerializeField, Min(0f)] private float enemyAttackFinishDelay = 0.35f;
+    [SerializeField] private GameObject playerHitVfxPrefab;
+    [SerializeField] private Transform playerHitVfxSpawnPoint;
+    [SerializeField] private AudioClip playerHitSfx;
+
+    [Header("Player Combat Mode Animation")]
+    [SerializeField] private string playerDefenseModeBoolName;
+    [SerializeField] private string playerCombatModeIntName;
+
+    [Header("Player Hit Animation")]
+    [SerializeField] private string playerAttackModeHitTriggerName;
+    [SerializeField] private string playerAttackModeHitStateName;
+    [SerializeField] private string playerDefenseModeHitTriggerName;
+    [SerializeField] private string playerDefenseModeHitStateName;
+    [SerializeField] private AnimationPlaybackMode playerHitPlaybackMode = AnimationPlaybackMode.Trigger;
+
+    [Header("Enemy Death Animation")]
+    [SerializeField] private string enemyDeathTriggerName;
+    [SerializeField] private string enemyDeathStateName;
+    [SerializeField] private AnimationPlaybackMode enemyDeathPlaybackMode = AnimationPlaybackMode.Trigger;
+    [SerializeField, Min(0f)] private float enemyDeathDuration = 1f;
+    [SerializeField] private AudioClip enemyDeathSfx;
+    [SerializeField] private GameObject enemyDeathVfxPrefab;
+    [SerializeField] private Transform enemyDeathVfxSpawnPoint;
+
     [Header("Damage Threshold")]
     [Tooltip("이 값 이하이면 약공격")]
     [SerializeField] private int lightMaxDamage = 50;
@@ -167,6 +235,7 @@ public class BattleAnimationManager : MonoBehaviour
     [SerializeField] private bool interruptCurrentAttack = true;
 
     private Coroutine currentAttackRoutine;
+    private CombatMode currentCombatMode = CombatMode.Attack;
 
     public bool IsPlayingAttack => currentAttackRoutine != null;
 
@@ -212,6 +281,12 @@ public class BattleAnimationManager : MonoBehaviour
         PlayAttack(attackType);
     }
 
+    public IEnumerator PlayAttackByDamageRoutine(int calculatedDamage)
+    {
+        int damage = useTestDamageOverride ? testDamage : calculatedDamage;
+        yield return PlayAttackRoutine(GetProfile(GetAttackTypeByDamage(damage)), true);
+    }
+
     public void PlayAttack(BattleAttackMotionType attackType)
     {
         AttackAnimationProfile profile = GetProfile(attackType);
@@ -239,7 +314,7 @@ public class BattleAnimationManager : MonoBehaviour
             currentAttackRoutine = null;
         }
 
-        currentAttackRoutine = StartCoroutine(PlayAttackRoutine(profile));
+        currentAttackRoutine = StartCoroutine(PlayAttackRoutine(profile, false));
     }
 
     public void StopCurrentAttack()
@@ -266,11 +341,31 @@ public class BattleAnimationManager : MonoBehaviour
         return BattleAttackMotionType.Heavy;
     }
 
-    private IEnumerator PlayAttackRoutine(AttackAnimationProfile profile)
+    private IEnumerator PlayAttackRoutine(AttackAnimationProfile profile, bool waitOnly)
     {
+        if (profile == null || playerAnimator == null)
+        {
+            yield break;
+        }
+
+        if (waitOnly && currentAttackRoutine != null)
+        {
+            if (interruptCurrentAttack)
+            {
+                StopCoroutine(currentAttackRoutine);
+                currentAttackRoutine = null;
+            }
+            else
+            {
+                yield break;
+            }
+        }
         ResetPlayerAttackTriggers();
 
-        playerAnimator.SetTrigger(profile.playerTriggerName);
+        if (!string.IsNullOrEmpty(profile.playerTriggerName))
+        {
+            playerAnimator.SetTrigger(profile.playerTriggerName);
+        }
         PlaySfx(profile.attackSfx);
 
         List<TimelineEvent> timeline = BuildTimeline(profile);
@@ -346,6 +441,19 @@ public class BattleAnimationManager : MonoBehaviour
 
     private void AddEnemyHitEvents(AttackAnimationProfile profile, List<TimelineEvent> timeline)
     {
+        if (profile.hitReactionEvents != null && profile.hitReactionEvents.Length > 0)
+        {
+            for (int i = 0; i < profile.hitReactionEvents.Length; i++)
+            {
+                HitReactionEvent hitEvent = profile.hitReactionEvents[i];
+                if (hitEvent != null)
+                {
+                    timeline.Add(TimelineEvent.CreateEnemyHit(hitEvent.delay, hitEvent));
+                }
+            }
+            return;
+        }
+
         if (profile.enemyHitDelays == null)
             return;
 
@@ -375,9 +483,12 @@ public class BattleAnimationManager : MonoBehaviour
                 break;
 
             case TimelineEventType.EnemyHit:
-                PlayEnemyHit();
-                PlaySfx(profile.hitSfx);
-                SpawnVfx(profile.hitVfxPrefab, enemyHitVfxPoint, profile.hitVfxLifeTime);
+                PlayEnemyHit(timelineEvent.HitReactionEvent);
+                PlaySfx(timelineEvent.HitReactionEvent != null ? timelineEvent.HitReactionEvent.hitSfx : profile.hitSfx);
+                SpawnVfx(
+                    timelineEvent.HitReactionEvent != null ? timelineEvent.HitReactionEvent.hitVfxPrefab : profile.hitVfxPrefab,
+                    timelineEvent.HitReactionEvent != null && timelineEvent.HitReactionEvent.hitVfxSpawnPointOverride != null ? timelineEvent.HitReactionEvent.hitVfxSpawnPointOverride : enemyHitVfxPoint,
+                    timelineEvent.HitReactionEvent != null ? timelineEvent.HitReactionEvent.hitVfxLifeTime : profile.hitVfxLifeTime);
                 break;
         }
     }
@@ -400,7 +511,7 @@ public class BattleAnimationManager : MonoBehaviour
         }
     }
 
-    private void PlayEnemyHit()
+    private void PlayEnemyHit(HitReactionEvent hitEvent = null)
     {
         if (enemyAnimator == null)
         {
@@ -408,15 +519,113 @@ public class BattleAnimationManager : MonoBehaviour
             return;
         }
 
-        if (useEnemyHitTrigger)
+        bool useTrigger = useEnemyHitTrigger;
+        string triggerName = enemyHitTriggerName;
+        string stateName = enemyHitStateName;
+
+        if (hitEvent != null)
         {
-            enemyAnimator.ResetTrigger(enemyHitTriggerName);
-            enemyAnimator.SetTrigger(enemyHitTriggerName);
+            if (!string.IsNullOrEmpty(hitEvent.enemyHitTriggerNameOverride))
+            {
+                triggerName = hitEvent.enemyHitTriggerNameOverride;
+            }
+
+            if (!string.IsNullOrEmpty(hitEvent.enemyHitStateNameOverride))
+            {
+                stateName = hitEvent.enemyHitStateNameOverride;
+            }
+
+            if (hitEvent.enemyHitPlaybackModeOverride == EnemyHitPlaybackModeOverride.Trigger)
+            {
+                useTrigger = true;
+            }
+            else if (hitEvent.enemyHitPlaybackModeOverride == EnemyHitPlaybackModeOverride.PlayState)
+            {
+                useTrigger = false;
+            }
+        }
+
+        if (useTrigger)
+        {
+            if (string.IsNullOrEmpty(triggerName)) return;
+            enemyAnimator.ResetTrigger(triggerName);
+            enemyAnimator.SetTrigger(triggerName);
         }
         else
         {
-            enemyAnimator.Play(enemyHitStateName, 0, 0f);
+            if (string.IsNullOrEmpty(stateName)) return;
+            enemyAnimator.Play(stateName, 0, 0f);
         }
+    }
+
+
+    public IEnumerator PlayEnemyAttackRoutine(Action onDamageTiming)
+    {
+        PlayAnimator(enemyAnimator, enemyAttackPlaybackMode, enemyAttackTriggerName, enemyAttackStateName);
+        PlaySfx(enemyAttackStartSfx);
+        SpawnVfx(enemyAttackVfxPrefab, enemyAttackVfxSpawnPoint);
+
+        if (playerHitDelay > 0f)
+        {
+            yield return new WaitForSeconds(playerHitDelay);
+        }
+
+        onDamageTiming?.Invoke();
+        PlayPlayerHit();
+        PlaySfx(playerHitSfx);
+        SpawnVfx(playerHitVfxPrefab, playerHitVfxSpawnPoint);
+
+        if (enemyAttackFinishDelay > 0f)
+        {
+            yield return new WaitForSeconds(enemyAttackFinishDelay);
+        }
+    }
+
+    public IEnumerator PlayEnemyDeathRoutine()
+    {
+        PlayAnimator(enemyAnimator, enemyDeathPlaybackMode, enemyDeathTriggerName, enemyDeathStateName);
+        PlaySfx(enemyDeathSfx);
+        SpawnVfx(enemyDeathVfxPrefab, enemyDeathVfxSpawnPoint);
+
+        if (enemyDeathDuration > 0f)
+        {
+            yield return new WaitForSeconds(enemyDeathDuration);
+        }
+    }
+
+    public void SetPlayerCombatMode(CombatMode mode)
+    {
+        currentCombatMode = mode;
+        if (playerAnimator == null) return;
+        if (!string.IsNullOrEmpty(playerDefenseModeBoolName))
+        {
+            playerAnimator.SetBool(playerDefenseModeBoolName, mode == CombatMode.Defense);
+        }
+        if (!string.IsNullOrEmpty(playerCombatModeIntName))
+        {
+            playerAnimator.SetInteger(playerCombatModeIntName, mode == CombatMode.Defense ? 1 : 0);
+        }
+    }
+
+    private void PlayPlayerHit()
+    {
+        string triggerName = currentCombatMode == CombatMode.Defense ? playerDefenseModeHitTriggerName : playerAttackModeHitTriggerName;
+        string stateName = currentCombatMode == CombatMode.Defense ? playerDefenseModeHitStateName : playerAttackModeHitStateName;
+        PlayAnimator(playerAnimator, playerHitPlaybackMode, triggerName, stateName);
+    }
+
+    private static void PlayAnimator(Animator animator, AnimationPlaybackMode mode, string triggerName, string stateName)
+    {
+        if (animator == null) return;
+        if (mode == AnimationPlaybackMode.Trigger)
+        {
+            if (string.IsNullOrEmpty(triggerName)) return;
+            animator.ResetTrigger(triggerName);
+            animator.SetTrigger(triggerName);
+            return;
+        }
+        if (string.IsNullOrEmpty(stateName)) return;
+        animator.Play(stateName, 0, 0f);
     }
 
     private void ResetPlayerAttackTriggers()
