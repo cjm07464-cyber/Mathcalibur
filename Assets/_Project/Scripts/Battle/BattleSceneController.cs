@@ -6,6 +6,7 @@ using System.Linq;
 using Mathcalibur.Audio;
 using Mathcalibur.Items;
 using Mathcalibur.Title;
+using Mathcalibur.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -25,6 +26,10 @@ namespace Mathcalibur.Battle
     {
         [SerializeField] private BattleConfig config;
         [SerializeField] private BattleAnimationManager battleAnimationManager;
+        [Header("Transition")]
+        [SerializeField] private float fadeOutDuration = 0.75f;
+        [SerializeField] private float fadeInDuration = 0.75f;
+        [SerializeField] private float musicFadeOutDuration = 0.75f;
         private BattleTileView[,] _grid;
         private RectTransform _boardRoot;
         private RectTransform _boardContainer;
@@ -103,6 +108,7 @@ namespace Mathcalibur.Battle
         private bool _unique1TransformReady;
         private bool _startingUniqueSelectionOpen;
         private bool _startingUniqueSelectionResolved;
+        private bool _startingUniqueConfirmTransitioning;
         private bool _activeItemConfirmOpen;
         private bool _defeatOverlayOpen;
         private int? _pendingStartingUniqueSelectionIndex;
@@ -206,8 +212,8 @@ namespace Mathcalibur.Battle
             ResolveBoardLayoutReference();
             BuildBoard();
             ResolveAutoLineClears(false);
-            GameAudioManager.Instance?.PlayBattleBgm();
             InitBattle();
+            TryPlayBattleBgmAfterStartingUniqueSelection();
             StartCoroutine(ValidateBattleSceneStartup());
         }
 
@@ -325,12 +331,15 @@ namespace Mathcalibur.Battle
 
         private void EnsureUiExists()
         {
-            var canvas = FindAnyObjectByType<Canvas>();
+            var canvas = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+                .FirstOrDefault(candidate => candidate != null && candidate.GetComponentInParent<SceneTransitionFader>() == null);
+
             if (canvas == null)
             {
                 var canvasGo = new GameObject("BattleCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
                 canvas = canvasGo.GetComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
                 var scaler = canvasGo.GetComponent<CanvasScaler>();
                 scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                 scaler.referenceResolution = new Vector2(1080f, 1920f);
@@ -1690,8 +1699,13 @@ namespace Mathcalibur.Battle
 
             RefreshHud(string.Empty, resultText);
             _hud.SetMessage(BuildBoardResolutionMessage(resultMessage));
+
+            // 결과값을 아주 잠깐 보여줄 시간
+            yield return new WaitForSeconds(1.5f);
+
             if (_enemyHp <= 0)
             {
+                RefreshHud(string.Empty, "-");
                 yield return HandleEnemyDeathThenStageClear();
                 yield break;
             }
@@ -1704,10 +1718,14 @@ namespace Mathcalibur.Battle
 
             if (_playerHp <= 0)
             {
+                RefreshHud(string.Empty, "-");
                 _hud.SetMessage("Defeat!");
                 OpenDefeatOverlay();
+                _isResolvingTurn = false;
+                yield break;
             }
 
+            RefreshHud(string.Empty, "-");
             _isResolvingTurn = false;
         }
 
@@ -1749,10 +1767,14 @@ namespace Mathcalibur.Battle
 
             if (_playerHp <= 0)
             {
+                RefreshHud(string.Empty, "-");
                 _hud.SetMessage("Defeat!");
                 OpenDefeatOverlay();
+                _isResolvingTurn = false;
+                yield break;
             }
 
+            RefreshHud(string.Empty, "-");
             _isResolvingTurn = false;
         }
 
@@ -2329,16 +2351,40 @@ namespace Mathcalibur.Battle
 
         private void ConfirmPendingStartingUniqueSelection()
         {
-            if (_pendingStartingUniqueSelectionIndex == null)
+            if (_startingUniqueConfirmTransitioning)
             {
                 return;
+            }
+
+            StartCoroutine(ConfirmPendingStartingUniqueSelectionRoutine());
+        }
+
+        private IEnumerator ConfirmPendingStartingUniqueSelectionRoutine()
+        {
+            if (_pendingStartingUniqueSelectionIndex == null)
+            {
+                yield break;
             }
 
             var index = _pendingStartingUniqueSelectionIndex.Value;
             if (index < 0 || index >= _startingUniqueCandidates.Count)
             {
                 ClearStartingUniqueExplainTexts();
-                return;
+                yield break;
+            }
+
+            _startingUniqueConfirmTransitioning = true;
+            SetCanvasGroupInteraction(_startUniqueOverlayRoot, false);
+            Coroutine musicFadeCoroutine = null;
+            if (GameAudioManager.Instance != null)
+            {
+                musicFadeCoroutine = StartCoroutine(GameAudioManager.Instance.FadeOutMusic(musicFadeOutDuration));
+            }
+
+            yield return SceneTransitionFader.Instance.FadeOut(fadeOutDuration);
+            if (musicFadeCoroutine != null)
+            {
+                yield return musicFadeCoroutine;
             }
 
             var item = _startingUniqueCandidates[index];
@@ -2346,11 +2392,27 @@ namespace Mathcalibur.Battle
             _startingUniqueSelectionResolved = true;
             _startingUniqueSelectionOpen = false;
             ClearStartingUniqueExplainTexts();
-            _startUniqueOverlayRoot.gameObject.SetActive(false);
+            if (_startUniqueOverlayRoot != null)
+            {
+                _startUniqueOverlayRoot.gameObject.SetActive(false);
+            }
             SetGameplayInteractionEnabled(true);
             RebuildCachedSpawnWeights();
             ResetStageLocalBattleState();
             InitBattle();
+            TryPlayBattleBgmAfterStartingUniqueSelection();
+            yield return SceneTransitionFader.Instance.FadeIn(fadeInDuration);
+            _startingUniqueConfirmTransitioning = false;
+        }
+
+        private void TryPlayBattleBgmAfterStartingUniqueSelection()
+        {
+            if (_startingUniqueSelectionOpen)
+            {
+                return;
+            }
+
+            GameAudioManager.Instance?.PlayBattleBgm();
         }
 
         private void SetGameplayInteractionEnabled(bool enabled)

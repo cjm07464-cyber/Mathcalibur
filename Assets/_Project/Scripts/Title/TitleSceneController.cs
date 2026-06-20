@@ -1,6 +1,7 @@
 using Mathcalibur.Audio;
+using Mathcalibur.UI;
+using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Mathcalibur.Title
@@ -27,6 +28,11 @@ namespace Mathcalibur.Title
         [Header("Scene Names")]
         [SerializeField] private string battleSceneName = "BattleScene";
 
+        [Header("Transition")]
+        [SerializeField] private float fadeOutDuration = 0.75f;
+        [SerializeField] private float fadeInDuration = 0.75f;
+        [SerializeField] private float musicFadeOutDuration = 0.75f;
+
         [Header("Main Buttons")]
         [SerializeField] private Button startGameButton;
         [SerializeField] private Button quitGameButton;
@@ -42,6 +48,7 @@ namespace Mathcalibur.Title
 
         private GameDifficulty? _pendingDifficulty;
         private Button _generatedStartBattleButton;
+        private bool _isTransitioning;
 
         private void Awake()
         {
@@ -90,9 +97,25 @@ namespace Mathcalibur.Title
 
         public void StartBattle(GameDifficulty difficulty)
         {
+            if (_isTransitioning)
+            {
+                return;
+            }
+
+            _isTransitioning = true;
+            SetTitleButtonsInteractable(false);
             GameSessionState.SetDifficulty(difficulty);
-            SceneManager.LoadScene(battleSceneName);
+
+            var fadeOutMusic = difficulty == GameDifficulty.Easy;
+
+            SceneTransitionFader.BeginFadeOutLoadSceneFadeIn(
+                battleSceneName,
+                fadeOutDuration,
+                fadeInDuration,
+                fadeOutMusic,
+                musicFadeOutDuration);
         }
+
 
         public void QuitGame()
         {
@@ -156,6 +179,16 @@ namespace Mathcalibur.Title
             {
                 _generatedStartBattleButton.gameObject.SetActive(false);
             }
+        }
+
+        private void SetTitleButtonsInteractable(bool interactable)
+        {
+            if (startGameButton != null) startGameButton.interactable = interactable;
+            if (quitGameButton != null) quitGameButton.interactable = interactable;
+            if (easyButton != null) easyButton.interactable = interactable;
+            if (normalButton != null) normalButton.interactable = interactable;
+            if (hardButton != null) hardButton.interactable = interactable;
+            if (_generatedStartBattleButton != null) _generatedStartBattleButton.interactable = interactable;
         }
 
         private static void BindButton(Button button, UnityEngine.Events.UnityAction callback)

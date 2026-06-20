@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 namespace Mathcalibur.Audio
 {
@@ -20,6 +21,8 @@ namespace Mathcalibur.Audio
         [SerializeField] private AudioClip expressionConfirmSfx;
         [SerializeField] private AudioClip invalidSelectionSfx;
 
+        private float _defaultMusicVolume = 1f;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -31,6 +34,7 @@ namespace Mathcalibur.Audio
             Instance = this;
             DontDestroyOnLoad(gameObject);
             EnsureSources();
+            _defaultMusicVolume = musicSource != null ? musicSource.volume : 1f;
         }
 
         public void PlayTitleBgm() => PlayMusic(titleBgm);
@@ -40,6 +44,75 @@ namespace Mathcalibur.Audio
         public void PlayExpressionConfirmSfx() => PlayUiSfx(expressionConfirmSfx);
         public void PlayInvalidSelectionSfx() => PlayUiSfx(invalidSelectionSfx);
 
+        public float MusicVolume
+        {
+            get
+            {
+                EnsureSources();
+                return musicSource != null ? musicSource.volume : _defaultMusicVolume;
+            }
+            set
+            {
+                EnsureSources();
+                _defaultMusicVolume = Mathf.Clamp01(value);
+                if (musicSource != null)
+                {
+                    musicSource.volume = _defaultMusicVolume;
+                }
+            }
+        }
+
+        public void ResetMusicVolume()
+        {
+            EnsureSources();
+            if (musicSource != null)
+            {
+                musicSource.volume = _defaultMusicVolume;
+            }
+        }
+
+        public IEnumerator FadeOutMusic(float duration)
+        {
+            EnsureSources();
+            if (musicSource == null || musicSource.clip == null)
+            {
+                yield break;
+            }
+
+            if (duration <= 0f)
+            {
+                StopMusic();
+                yield break;
+            }
+
+            var startVolume = musicSource.volume;
+            var elapsed = 0f;
+            while (elapsed < duration && musicSource != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                musicSource.volume = Mathf.Lerp(startVolume, 0f, Mathf.Clamp01(elapsed / duration));
+                yield return null;
+            }
+
+            StopMusic();
+            if (musicSource != null)
+            {
+                musicSource.volume = _defaultMusicVolume;
+            }
+        }
+
+        public void StopMusic()
+        {
+            EnsureSources();
+            if (musicSource == null)
+            {
+                return;
+            }
+
+            musicSource.Stop();
+            musicSource.clip = null;
+        }
+
         private void PlayMusic(AudioClip clip)
         {
             EnsureSources();
@@ -47,6 +120,7 @@ namespace Mathcalibur.Audio
             if (musicSource.clip == clip && musicSource.isPlaying) return;
             musicSource.clip = clip;
             musicSource.loop = true;
+            musicSource.volume = _defaultMusicVolume;
             musicSource.Play();
         }
 
