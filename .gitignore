@@ -24,3 +24,11 @@ UserSettings/
 .DS_Store
 Thumbs.db
 .omx/
+
+# Android / NDK generated
+.utmp/
+*.utmp
+*.o
+*.obj
+*.cmake
+compile_commands.json
