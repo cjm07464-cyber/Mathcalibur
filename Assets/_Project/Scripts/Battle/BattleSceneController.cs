@@ -22,10 +22,40 @@ namespace Mathcalibur.Battle
         Defense,
     }
 
+    public enum EnemyType
+    {
+        Wolf,
+        Orc,
+        StoneGolem,
+        DemonKing,
+    }
+
     public class BattleSceneController : MonoBehaviour, IItemEffectRuntime
     {
+        [Serializable]
+        private sealed class EnemyVisualEntry
+        {
+            [SerializeField] private EnemyType enemyType = EnemyType.Wolf;
+            [SerializeField] private GameObject root;
+            [SerializeField] private Animator animator;
+            [SerializeField] private Transform hitVfxPoint;
+            [SerializeField] private string attackTriggerName = "Attack";
+            [SerializeField] private string hitTriggerName = "Hit";
+            [SerializeField] private string deathTriggerName = string.Empty;
+
+            public EnemyType EnemyType => enemyType;
+            public GameObject Root => root;
+            public Animator Animator => animator;
+            public Transform HitVfxPoint => hitVfxPoint;
+            public string AttackTriggerName => attackTriggerName;
+            public string HitTriggerName => hitTriggerName;
+            public string DeathTriggerName => deathTriggerName;
+        }
+
         [SerializeField] private BattleConfig config;
         [SerializeField] private BattleAnimationManager battleAnimationManager;
+        [Header("Enemy Visuals")]
+        [SerializeField] private EnemyVisualEntry[] enemyVisualEntries = Array.Empty<EnemyVisualEntry>();
         [Header("Transition")]
         [SerializeField] private float fadeOutDuration = 0.75f;
         [SerializeField] private float fadeInDuration = 0.75f;
@@ -116,6 +146,7 @@ namespace Mathcalibur.Battle
         private ShopSelectionContext? _pendingShopSelection;
         private RuntimePlayerState _playerState;
         private StageDefinition _currentStage;
+        private EnemyType[] _stageEnemyOrder;
         private ItemDatabase _itemDatabase;
         private RuntimeItemInventory _runtimeItemInventory;
         private Button _rerollButton;
@@ -170,6 +201,8 @@ namespace Mathcalibur.Battle
         private const string DefaultBattleConfigResourcePath = "BattleConfig";
         private const int MaxAutoLineClearLoops = 10;
         private const int MaxStage = 10;
+        private const float StageClearGoldRewardMultiplier = 1.5f;
+        private const float EdgeColumnOperatorChanceMultiplier = 0.5f;
         private const string Unique1ItemId = "UNIQUE_1_AWAKENED_ONE";
         private const string Unique2ItemId = "UNIQUE_2_PROBABILITY_STRIKE";
         private const string Unique3ItemId = "UNIQUE_3_TRINITY";
@@ -880,6 +913,7 @@ namespace Mathcalibur.Battle
             }
 
             _playerState = new RuntimePlayerState();
+            _stageEnemyOrder = null;
             _runtimeItemInventory = new RuntimeItemInventory();
             _numberWeightModifiers.Clear();
             _operatorWeightModifiers.Clear();
@@ -1384,6 +1418,7 @@ namespace Mathcalibur.Battle
             }
 
             _currentStage = GetStageDefinition(_playerState.CurrentStage);
+            ApplyEnemyVisual(_currentStage.EnemyType);
             if (_playerHp <= 0)
             {
                 _playerHp = _currentPlayerMaxHp;
@@ -1401,6 +1436,43 @@ namespace Mathcalibur.Battle
             RefreshHud(string.Empty, "-");
             _hud.SetMessage($"Stage {_playerState.CurrentStage}: {_currentStage.EnemyName}");
             EnsureStartingUniqueSelection();
+        }
+
+        private void ApplyEnemyVisual(EnemyType enemyType)
+        {
+            var entries = enemyVisualEntries ?? Array.Empty<EnemyVisualEntry>();
+            EnemyVisualEntry selectedEntry = null;
+
+            for (var i = 0; i < entries.Length; i++)
+            {
+                var entry = entries[i];
+                if (selectedEntry == null && entry != null && entry.EnemyType == enemyType)
+                {
+                    selectedEntry = entry;
+                }
+            }
+
+            for (var i = 0; i < entries.Length; i++)
+            {
+                var entry = entries[i];
+                if (entry?.Root != null)
+                {
+                    entry.Root.SetActive(ReferenceEquals(entry, selectedEntry));
+                }
+            }
+
+            if (selectedEntry == null)
+            {
+                battleAnimationManager?.SetEnemyRuntimeBindings(null, null, null, null, null);
+                return;
+            }
+
+            battleAnimationManager?.SetEnemyRuntimeBindings(
+                selectedEntry.Animator,
+                selectedEntry.HitVfxPoint,
+                selectedEntry.AttackTriggerName,
+                selectedEntry.HitTriggerName,
+                selectedEntry.DeathTriggerName);
         }
 
         private IEnumerator ValidateBattleSceneStartup()
@@ -1683,7 +1755,7 @@ namespace Mathcalibur.Battle
             UpdateUnique1State(context, consumedUnique1Ready);
 
             var resultText = $"{baseResult}";
-            var shouldEnemyAttack = _enemyHp > 0 && _validTurnCount % config.EnemyAttackEveryValidTurns == 0;
+            var shouldEnemyAttack = _enemyHp > 0 && _validTurnCount % _currentStage.EnemyAttackCycle == 0;
             StartCoroutine(ResolveBoardAfterSelection(resultText, uniqueOutcome.Message, shouldEnemyAttack, dealtDamage));
         }
 
@@ -1748,7 +1820,7 @@ namespace Mathcalibur.Battle
             var damageAfterShield = 0;
             void ApplyEnemyAttackDamage()
             {
-                damageAfterShield = Mathf.Max(0, config.EnemyAttackDamage - _playerShield);
+                damageAfterShield = Mathf.Max(0, _currentStage.EnemyAttackDamage - _playerShield);
                 _playerShield = 0;
                 _playerHp = Mathf.Max(0, _playerHp - damageAfterShield);
                 TriggerEnemyAttackCameraShake(damageAfterShield > 0);
@@ -2099,6 +2171,17 @@ namespace Mathcalibur.Battle
 
         private float GetNumberChanceForCell(int x, int y)
         {
+            var baseOperatorChance = 1f - GetBaseNumberChanceForCell(x, y);
+            var adjustedOperatorChance = GetColumnAdjustedOperatorChance(
+                x,
+                y,
+                config.Columns,
+                baseOperatorChance);
+            return Mathf.Clamp01(1f - adjustedOperatorChance);
+        }
+
+        private float GetBaseNumberChanceForCell(int x, int y)
+        {
             if (!HasUniqueItem(Unique4ItemId) || !_itemDatabase.TryGetItem(Unique4ItemId, out var unique4))
             {
                 var totalDefaultRatio = Mathf.Max(1, config.DefaultNumberSpawnRatio + config.DefaultOperatorSpawnRatio);
@@ -2115,6 +2198,34 @@ namespace Mathcalibur.Battle
 
             var total = Mathf.Max(1, numberRatio + operatorRatio);
             return Mathf.Clamp01(numberRatio / (float)total);
+        }
+
+        private float GetColumnAdjustedOperatorChance(
+            int columnIndex,
+            int rowIndex,
+            int columnCount,
+            float baseOperatorChance)
+        {
+            baseOperatorChance = Mathf.Clamp01(baseOperatorChance);
+            var innerColumnCount = columnCount - 2;
+            if (innerColumnCount <= 0)
+            {
+                return baseOperatorChance;
+            }
+
+            var isEdgeColumn = columnIndex == 0 || columnIndex == columnCount - 1;
+            if (isEdgeColumn)
+            {
+                return Mathf.Clamp01(baseOperatorChance * EdgeColumnOperatorChanceMultiplier);
+            }
+
+            var firstEdgeOperatorChance = 1f - GetBaseNumberChanceForCell(0, rowIndex);
+            var lastEdgeOperatorChance = 1f - GetBaseNumberChanceForCell(columnCount - 1, rowIndex);
+            var removedEdgeOperatorChance =
+                (firstEdgeOperatorChance + lastEdgeOperatorChance)
+                * (1f - EdgeColumnOperatorChanceMultiplier);
+            var innerColumnBonus = removedEdgeOperatorChance / innerColumnCount;
+            return Mathf.Clamp01(baseOperatorChance + innerColumnBonus);
         }
 
         private void SetCombatMode(CombatMode mode)
@@ -2644,6 +2755,7 @@ namespace Mathcalibur.Battle
 
             var countedNumberTiles = new HashSet<BattleTileView>();
             var damage = 0;
+            var numberValueSum = 0;
             foreach (var group in lineGroups)
             {
                 if (group == null)
@@ -2664,8 +2776,13 @@ namespace Mathcalibur.Battle
                         continue;
                     }
 
-                    damage += tile.NumberValue;
+                    numberValueSum += tile.NumberValue;
                 }
+            }
+
+            if (countedNumberTiles.Count > 0)
+            {
+                damage += Mathf.RoundToInt(numberValueSum / (float)countedNumberTiles.Count);
             }
 
             if (damage <= 0)
@@ -2909,7 +3026,7 @@ namespace Mathcalibur.Battle
         private void RefreshHud(string expression, string result)
         {
             _hud.SetHp(_playerHp, _playerShield, _enemyHp, _currentStage.EnemyHp);
-            var left = config.EnemyAttackEveryValidTurns - (_validTurnCount % config.EnemyAttackEveryValidTurns);
+            var left = _currentStage.EnemyAttackCycle - (_validTurnCount % _currentStage.EnemyAttackCycle);
             _hud.SetCountdown(left);
             _hud.SetExpression(expression);
             _hud.SetResult(result);
@@ -2986,7 +3103,7 @@ namespace Mathcalibur.Battle
                 reward += _itemDatabase.ResolveEffectInt(unique6, "flatGoldBonus");
             }
 
-            return reward;
+            return Mathf.RoundToInt(reward * StageClearGoldRewardMultiplier);
         }
 
         private void OpenShopPanel()
@@ -4406,7 +4523,78 @@ namespace Mathcalibur.Battle
 
         private StageDefinition GetStageDefinition(int stage)
         {
-            return StageDatabase.GetStage(stage, config.EnemyMaxHp);
+            if (stage >= MaxStage)
+            {
+                return StageDatabase.GetFinalBossStage(
+                    config.EnemyMaxHp,
+                    config.EnemyAttackDamage,
+                    config.EnemyAttackEveryValidTurns);
+            }
+
+            EnsureEnemyOrderForRun();
+            var stageIndex = Mathf.Clamp(stage - 1, 0, _stageEnemyOrder.Length - 1);
+            return StageDatabase.GetStage(stage, _stageEnemyOrder[stageIndex], GetBoardDeckUpgradeCount());
+        }
+
+        private void EnsureEnemyOrderForRun()
+        {
+            if (_stageEnemyOrder != null && _stageEnemyOrder.Length == MaxStage - 1)
+            {
+                return;
+            }
+
+            _stageEnemyOrder = new EnemyType[MaxStage - 1];
+
+            var firstEnemy = UnityEngine.Random.Range(0, 2) == 0 ? EnemyType.Wolf : EnemyType.Orc;
+            _stageEnemyOrder[0] = firstEnemy;
+
+            var firstBlockRemaining = firstEnemy == EnemyType.Wolf
+                ? new[] { EnemyType.Orc, EnemyType.StoneGolem }
+                : new[] { EnemyType.Wolf, EnemyType.StoneGolem };
+            ShuffleEnemyTypes(firstBlockRemaining);
+            _stageEnemyOrder[1] = firstBlockRemaining[0];
+            _stageEnemyOrder[2] = firstBlockRemaining[1];
+
+            for (var blockStart = 3; blockStart < _stageEnemyOrder.Length; blockStart += 3)
+            {
+                var block = new[] { EnemyType.Wolf, EnemyType.Orc, EnemyType.StoneGolem };
+                ShuffleEnemyTypes(block);
+                Array.Copy(block, 0, _stageEnemyOrder, blockStart, block.Length);
+            }
+        }
+
+        private static void ShuffleEnemyTypes(EnemyType[] enemyTypes)
+        {
+            for (var i = enemyTypes.Length - 1; i > 0; i--)
+            {
+                var swapIndex = UnityEngine.Random.Range(0, i + 1);
+                (enemyTypes[i], enemyTypes[swapIndex]) = (enemyTypes[swapIndex], enemyTypes[i]);
+            }
+        }
+
+        private int GetBoardDeckUpgradeCount()
+        {
+            if (_runtimeItemInventory == null || _itemDatabase == null)
+            {
+                return 0;
+            }
+
+            var count = 0;
+            foreach (var acquisition in _runtimeItemInventory.AcquisitionCounts)
+            {
+                if (acquisition.Value <= 0
+                    || !_itemDatabase.TryGetItem(acquisition.Key, out var item)
+                    || item == null
+                    || !item.IsValid
+                    || item.Category != ItemCategory.BoardDeckUpgrade)
+                {
+                    continue;
+                }
+
+                count += acquisition.Value;
+            }
+
+            return count;
         }
 
         private void RebuildCachedSpawnWeightsInternal()
@@ -4700,25 +4888,91 @@ namespace Mathcalibur.Battle
 
         private readonly struct StageDefinition
         {
-            public StageDefinition(string enemyName, int enemyHp)
+            public StageDefinition(
+                EnemyType enemyType,
+                string enemyName,
+                int enemyHp,
+                int enemyAttackDamage,
+                int enemyAttackCycle)
             {
+                EnemyType = enemyType;
                 EnemyName = enemyName;
                 EnemyHp = enemyHp;
+                EnemyAttackDamage = enemyAttackDamage;
+                EnemyAttackCycle = Mathf.Max(1, enemyAttackCycle);
             }
 
+            public EnemyType EnemyType { get; }
             public string EnemyName { get; }
             public int EnemyHp { get; }
+            public int EnemyAttackDamage { get; }
+            public int EnemyAttackCycle { get; }
+        }
+
+        private readonly struct EnemyDefinition
+        {
+            public EnemyDefinition(
+                EnemyType enemyType,
+                string displayName,
+                int baseHp,
+                int baseAttackDamage,
+                int attackCycle)
+            {
+                EnemyType = enemyType;
+                DisplayName = displayName;
+                BaseHp = baseHp;
+                BaseAttackDamage = baseAttackDamage;
+                AttackCycle = attackCycle;
+            }
+
+            public EnemyType EnemyType { get; }
+            public string DisplayName { get; }
+            public int BaseHp { get; }
+            public int BaseAttackDamage { get; }
+            public int AttackCycle { get; }
         }
 
         private static class StageDatabase
         {
-            private const int EnemyHpIncreasePerStage = 20;
+            private const int ExistingFinalBossPlaceholderHpBonus = 180;
 
-            public static StageDefinition GetStage(int stage, int baseEnemyHp)
+            public static StageDefinition GetStage(int stage, EnemyType enemyType, int boardDeckUpgradeCount)
             {
-                string[] order = { "Kobold", "Orc", "Golem", "Kobold", "Orc", "Golem", "Kobold", "Orc", "Golem", "Demon King" };
-                var idx = Mathf.Clamp(stage - 1, 0, order.Length - 1);
-                return new StageDefinition(order[idx], baseEnemyHp + idx * EnemyHpIncreasePerStage);
+                var enemy = GetEnemyDefinition(enemyType);
+                var statMultiplier = stage switch
+                {
+                    <= 3 => 1f,
+                    <= 6 => 1.5f,
+                    _ => boardDeckUpgradeCount >= 6 ? 2.5f : 2f,
+                };
+
+                return new StageDefinition(
+                    enemy.EnemyType,
+                    enemy.DisplayName,
+                    Mathf.RoundToInt(enemy.BaseHp * statMultiplier),
+                    Mathf.RoundToInt(enemy.BaseAttackDamage * statMultiplier),
+                    enemy.AttackCycle);
+            }
+
+            public static StageDefinition GetFinalBossStage(int placeholderBaseHp, int placeholderAttackDamage, int placeholderAttackCycle)
+            {
+                return new StageDefinition(
+                    EnemyType.DemonKing,
+                    "Demon King",
+                    placeholderBaseHp + ExistingFinalBossPlaceholderHpBonus,
+                    placeholderAttackDamage,
+                    placeholderAttackCycle);
+            }
+
+            private static EnemyDefinition GetEnemyDefinition(EnemyType enemyType)
+            {
+                return enemyType switch
+                {
+                    EnemyType.Wolf => new EnemyDefinition(EnemyType.Wolf, "울프", 40, 10, 2),
+                    EnemyType.Orc => new EnemyDefinition(EnemyType.Orc, "오크", 50, 10, 3),
+                    EnemyType.StoneGolem => new EnemyDefinition(EnemyType.StoneGolem, "스톤골렘", 120, 25, 5),
+                    _ => new EnemyDefinition(EnemyType.Wolf, "울프", 40, 10, 2),
+                };
             }
         }
     }

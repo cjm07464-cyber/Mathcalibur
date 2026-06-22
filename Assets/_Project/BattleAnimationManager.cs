@@ -236,15 +236,44 @@ public class BattleAnimationManager : MonoBehaviour
 
     private Coroutine currentAttackRoutine;
     private CombatMode currentCombatMode = CombatMode.Attack;
+    private Animator defaultEnemyAnimator;
+    private Transform defaultEnemyHitVfxPoint;
+    private string defaultEnemyAttackTriggerName;
+    private string defaultEnemyHitTriggerName;
+    private string defaultEnemyDeathTriggerName;
+    private bool defaultUseEnemyHitTrigger;
+    private AnimationPlaybackMode defaultEnemyAttackPlaybackMode;
+    private AnimationPlaybackMode defaultEnemyDeathPlaybackMode;
+    private bool enemyInspectorBindingsCaptured;
 
     public bool IsPlayingAttack => currentAttackRoutine != null;
 
     private void Awake()
     {
+        CaptureEnemyInspectorBindings();
+
         if (sfxSource == null)
         {
             sfxSource = GetComponent<AudioSource>();
         }
+    }
+
+    private void CaptureEnemyInspectorBindings()
+    {
+        if (enemyInspectorBindingsCaptured)
+        {
+            return;
+        }
+
+        defaultEnemyAnimator = enemyAnimator;
+        defaultEnemyHitVfxPoint = enemyHitVfxPoint;
+        defaultEnemyAttackTriggerName = enemyAttackTriggerName;
+        defaultEnemyHitTriggerName = enemyHitTriggerName;
+        defaultEnemyDeathTriggerName = enemyDeathTriggerName;
+        defaultUseEnemyHitTrigger = useEnemyHitTrigger;
+        defaultEnemyAttackPlaybackMode = enemyAttackPlaybackMode;
+        defaultEnemyDeathPlaybackMode = enemyDeathPlaybackMode;
+        enemyInspectorBindingsCaptured = true;
     }
 
     private void Update()
@@ -591,6 +620,43 @@ public class BattleAnimationManager : MonoBehaviour
         {
             yield return new WaitForSeconds(enemyDeathDuration);
         }
+    }
+
+    public void SetEnemyRuntimeBindings(
+        Animator animator,
+        Transform hitVfxPoint,
+        string attackTriggerName,
+        string hitTriggerName,
+        string deathTriggerName)
+    {
+        CaptureEnemyInspectorBindings();
+
+        var restoreInspectorBindings = animator == null
+            && hitVfxPoint == null
+            && attackTriggerName == null
+            && hitTriggerName == null
+            && deathTriggerName == null;
+
+        enemyAnimator = animator != null ? animator : defaultEnemyAnimator;
+        enemyHitVfxPoint = hitVfxPoint != null ? hitVfxPoint : defaultEnemyHitVfxPoint;
+
+        if (restoreInspectorBindings)
+        {
+            enemyAttackTriggerName = defaultEnemyAttackTriggerName;
+            enemyHitTriggerName = defaultEnemyHitTriggerName;
+            enemyDeathTriggerName = defaultEnemyDeathTriggerName;
+            useEnemyHitTrigger = defaultUseEnemyHitTrigger;
+            enemyAttackPlaybackMode = defaultEnemyAttackPlaybackMode;
+            enemyDeathPlaybackMode = defaultEnemyDeathPlaybackMode;
+            return;
+        }
+
+        enemyAttackTriggerName = attackTriggerName ?? string.Empty;
+        enemyHitTriggerName = hitTriggerName ?? string.Empty;
+        enemyDeathTriggerName = deathTriggerName ?? string.Empty;
+        useEnemyHitTrigger = true;
+        enemyAttackPlaybackMode = AnimationPlaybackMode.Trigger;
+        enemyDeathPlaybackMode = AnimationPlaybackMode.Trigger;
     }
 
     public void SetPlayerCombatMode(CombatMode mode)
