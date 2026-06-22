@@ -1993,6 +1993,12 @@ namespace Mathcalibur.Battle
                 }
             }
 
+            if (selectedEntry == null)
+            {
+                battleAnimationManager?.SetEnemyRuntimeBindings(null, null, null, null, null);
+                return;
+            }
+
             for (var i = 0; i < entries.Length; i++)
             {
                 var entry = entries[i];
@@ -2000,12 +2006,6 @@ namespace Mathcalibur.Battle
                 {
                     entry.Root.SetActive(ReferenceEquals(entry, selectedEntry));
                 }
-            }
-
-            if (selectedEntry == null)
-            {
-                battleAnimationManager?.SetEnemyRuntimeBindings(null, null, null, null, null);
-                return;
             }
 
             battleAnimationManager?.SetEnemyRuntimeBindings(
@@ -2726,15 +2726,8 @@ namespace Mathcalibur.Battle
         {
             if (!HasUniqueItem(Unique4ItemId) || !_itemDatabase.TryGetItem(Unique4ItemId, out var unique4))
             {
-                var isDefaultACell = (x + y) % 2 == 0;
-                var defaultNumberRatio = isDefaultACell
-                    ? config.DefaultNumberSpawnRatio
-                    : config.DefaultOperatorSpawnRatio;
-                var defaultOperatorRatio = isDefaultACell
-                    ? config.DefaultOperatorSpawnRatio
-                    : config.DefaultNumberSpawnRatio;
-                var totalDefaultRatio = Mathf.Max(1, defaultNumberRatio + defaultOperatorRatio);
-                return Mathf.Clamp01(defaultNumberRatio / (float)totalDefaultRatio);
+                var totalDefaultRatio = Mathf.Max(1, config.DefaultNumberSpawnRatio + config.DefaultOperatorSpawnRatio);
+                return Mathf.Clamp01(config.DefaultNumberSpawnRatio / (float)totalDefaultRatio);
             }
 
             var isACell = (x + y) % 2 == 0;
