@@ -223,6 +223,20 @@ namespace Mathcalibur.Battle
         }
 
         [Serializable]
+        public struct UniqueNumberTileSpriteEntry
+        {
+            [Tooltip("고유형 아이템 보유 시 외형을 교체할 숫자입니다. 3번 고유형은 3, 6, 9를 각각 등록합니다.")]
+            [InspectorName("숫자")]
+            public int Value;
+            [Tooltip("해당 고유형 아이템을 보유 중일 때 평상시 표시할 스프라이트입니다.")]
+            [InspectorName("고유형 기본 이미지")]
+            public Sprite NormalSprite;
+            [Tooltip("해당 고유형 아이템을 보유 중인 숫자 타일을 선택했을 때 표시할 스프라이트입니다. 비워두면 고유형 기본 이미지를 사용합니다.")]
+            [InspectorName("고유형 선택 이미지")]
+            public Sprite SelectedSprite;
+        }
+
+        [Serializable]
         public struct OperatorTileSpriteEntry
         {
             [Tooltip("적용할 연산자입니다.")]
@@ -262,6 +276,14 @@ namespace Mathcalibur.Battle
             new() { Value = 1 }, new() { Value = 2 }, new() { Value = 3 },
             new() { Value = 4 }, new() { Value = 5 }, new() { Value = 6 },
             new() { Value = 7 }, new() { Value = 8 }, new() { Value = 9 },
+        };
+        [Header("고유형 숫자 타일 이미지")]
+        [Tooltip("고유형 아이템 보유 시 사용할 숫자 타일의 기본/선택 이미지를 연결합니다. 1=유니크1, 2=유니크2, 3·6·9=유니크3, 5=유니크5입니다.")]
+        [InspectorName("고유형 숫자 타일")]
+        [SerializeField] private List<UniqueNumberTileSpriteEntry> uniqueNumberTileSprites = new()
+        {
+            new() { Value = 1 }, new() { Value = 2 }, new() { Value = 3 },
+            new() { Value = 5 }, new() { Value = 6 }, new() { Value = 9 },
         };
         [Tooltip("연산자 타일별 기본/선택 이미지를 Inspector에서 연결합니다.")]
         [SerializeField] private List<OperatorTileSpriteEntry> operatorTileSprites = new()
@@ -341,6 +363,7 @@ namespace Mathcalibur.Battle
         public IReadOnlyList<WeightedNumber> NumberWeights => numberWeights;
         public IReadOnlyList<WeightedOperator> OperatorWeights => operatorWeights;
         public IReadOnlyList<NumberTileSpriteEntry> NumberTileSprites => numberTileSprites;
+        public IReadOnlyList<UniqueNumberTileSpriteEntry> UniqueNumberTileSprites => uniqueNumberTileSprites;
         public IReadOnlyList<OperatorTileSpriteEntry> OperatorTileSprites => operatorTileSprites;
         public bool ShowTileLabelWhenSpriteAssigned => showTileLabelWhenSpriteAssigned;
     }

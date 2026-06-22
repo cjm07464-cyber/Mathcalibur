@@ -150,8 +150,27 @@ MonoBehaviour:
     NormalSprite: {fileID: 21300000, guid: 70f6fd857f8f96749bd4638bbd0369ab, type: 3}
     SelectedSprite: {fileID: 21300000, guid: 87199d62f5cd88445a7a122d9c23e58d, type: 3}
   - Value: 11
-    NormalSprite: {fileID: 21300000, guid: 77360d94687cbc54ea1a0d5a491e93c9, type: 3}
-    SelectedSprite: {fileID: 21300000, guid: 238fb9f46827256448552607e42fff4f, type: 3}
+    NormalSprite: {fileID: 21300000, guid: fde09efeaca9ac940b8d0a03269e1512, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: a111f6fd9f20e344c9538f8322bd0834, type: 3}
+  uniqueNumberTileSprites:
+  - Value: 1
+    NormalSprite: {fileID: 21300000, guid: 0a1fdaacfbdcbc1408c8f1ee04fea603, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 9870130914260824a939eb9509a9151f, type: 3}
+  - Value: 2
+    NormalSprite: {fileID: 21300000, guid: 9d521a37b66310f47b5fd93c65ec38ca, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: ccd6b9354dbef7745928def8b742a974, type: 3}
+  - Value: 3
+    NormalSprite: {fileID: 21300000, guid: f52f889bf71038d488caba96edc3d13c, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 318146fa7d2710c4b8cd90fa869112f6, type: 3}
+  - Value: 5
+    NormalSprite: {fileID: 21300000, guid: a26c7ab781331d04d8f36c5289bf6c0a, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 9995297820b20c64eafb417f97ea317a, type: 3}
+  - Value: 6
+    NormalSprite: {fileID: 21300000, guid: 8053b2eef9170764c83b909eab262b9f, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 05ce94d31e85b5e4384c7b7558737d0f, type: 3}
+  - Value: 9
+    NormalSprite: {fileID: 21300000, guid: cc1bf615d34a9b44790be10d7437c466, type: 3}
+    SelectedSprite: {fileID: 21300000, guid: 52342a4687fcbd44d81f07d075ab3e50, type: 3}
   operatorTileSprites:
   - Value: 0
     NormalSprite: {fileID: 21300000, guid: 20bd79441f91f3b4097adf6523423959, type: 3}
