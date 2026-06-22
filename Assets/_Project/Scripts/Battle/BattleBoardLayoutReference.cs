@@ -253,6 +253,7 @@ namespace Mathcalibur.Battle
             [SerializeField] private TMP_Text explainNameText;
             [SerializeField] private UniqueItemExplainTextReference explainTextReferences;
             [SerializeField] private Button selectButton;
+            [SerializeField] private Button backButton;
 
             public RectTransform OverlayRoot => overlayRoot;
             public RectTransform PanelRoot => panelRoot;
@@ -261,6 +262,7 @@ namespace Mathcalibur.Battle
             public TMP_Text ExplainNameText => explainNameText;
             public UniqueItemExplainTextReference ExplainTextReferences => explainTextReferences;
             public Button SelectButton => selectButton;
+            public Button BackButton => backButton;
             public bool HasSceneLayout => overlayRoot != null || panelRoot != null;
         }
 
@@ -322,8 +324,10 @@ namespace Mathcalibur.Battle
         public class WeightBarReference
         {
             [SerializeField] private RectTransform imageRect;
+            [SerializeField] private TMP_Text percentageText;
 
             public RectTransform ImageRect => imageRect;
+            public TMP_Text PercentageText => percentageText;
         }
 
         [System.Serializable]
@@ -387,6 +391,27 @@ namespace Mathcalibur.Battle
             public bool HasSceneLayout => overlayRoot != null || panelRoot != null;
         }
 
+        [System.Serializable]
+        public class DefeatLayoutReference
+        {
+            [SerializeField] private RectTransform overlayRoot;
+            [SerializeField] private RectTransform panelRoot;
+            [SerializeField] private TMP_Text maxDamageText;
+            [SerializeField] private Button retryCurrentStageButton;
+            [SerializeField] private Button restartFromBeginningButton;
+            [SerializeField] private Button returnToTitleButton;
+            [SerializeField] private Button debugOpenButton;
+
+            public RectTransform OverlayRoot => overlayRoot;
+            public RectTransform PanelRoot => panelRoot;
+            public TMP_Text MaxDamageText => maxDamageText;
+            public Button RetryCurrentStageButton => retryCurrentStageButton;
+            public Button RestartFromBeginningButton => restartFromBeginningButton;
+            public Button ReturnToTitleButton => returnToTitleButton;
+            public Button DebugOpenButton => debugOpenButton;
+            public bool HasSceneLayout => overlayRoot != null || panelRoot != null;
+        }
+
         [Header("타일 배치 기준")]
         [SerializeField] private RectTransform tilePanel;
         [SerializeField] private RectTransform tileStartPoint;
@@ -410,6 +435,8 @@ namespace Mathcalibur.Battle
 
         [Header("상점 UI")]
         [SerializeField] private ShopLayoutReference shopLayout;
+        [Header("패배 UI")]
+        [SerializeField] private DefeatLayoutReference defeatLayout;
         [Header("아이템 분야별 아이콘")]
         [SerializeField] private ItemCategoryIconSet itemCategoryIcons;
         [Header("가방 전용 아이콘")]
@@ -430,6 +457,7 @@ namespace Mathcalibur.Battle
         public PercentageLayoutReference PercentageLayout => percentageLayout;
         public StartingUniqueLayoutReference StartingUniqueLayout => startingUniqueLayout;
         public ShopLayoutReference ShopLayout => shopLayout;
+        public DefeatLayoutReference DefeatLayout => defeatLayout;
         public ItemCategoryIconSet ItemCategoryIcons => itemCategoryIcons;
         public BagItemIconSet BagItemIcons => bagItemIcons;
         public Vector2 ShopActiveItemIconScale => new(Mathf.Max(0.1f, shopActiveItemIconScale.x), Mathf.Max(0.1f, shopActiveItemIconScale.y));

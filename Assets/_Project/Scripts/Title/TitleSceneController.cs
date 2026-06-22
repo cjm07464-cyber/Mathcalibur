@@ -1,6 +1,7 @@
 using Mathcalibur.Audio;
 using Mathcalibur.UI;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -49,6 +50,9 @@ namespace Mathcalibur.Title
         private GameDifficulty? _pendingDifficulty;
         private Button _generatedStartBattleButton;
         private bool _isTransitioning;
+        private RectTransform _startMenuBlackBackgroundRoot;
+        private RectTransform _levelMenuContentRoot;
+        private readonly Dictionary<RectTransform, Vector2> _normalizedAnchoredPositions = new();
 
         private void Awake()
         {
@@ -59,6 +63,9 @@ namespace Mathcalibur.Title
             BindButton(normalButton, () => SelectDifficulty(GameDifficulty.Normal));
             BindButton(hardButton, () => SelectDifficulty(GameDifficulty.Hard));
 
+            EnsureStartMenuBlackBackground();
+            CacheLevelMenuResponsiveLayout();
+
             if (startBattleButtonRect != null)
             {
                 startBattleButtonRect.gameObject.SetActive(false);
@@ -67,10 +74,29 @@ namespace Mathcalibur.Title
             SetLevelPanelVisible(false);
         }
 
+        private void Start()
+        {
+            Canvas.ForceUpdateCanvases();
+            ApplyLevelMenuResponsiveLayout();
+            StartCoroutine(ApplyResponsiveLayoutNextFrame());
+        }
+
+        private void OnRectTransformDimensionsChange()
+        {
+            if (!isActiveAndEnabled)
+            {
+                return;
+            }
+
+            ApplyLevelMenuResponsiveLayout();
+        }
+
         public void OpenLevelPanel()
         {
             ClearPendingDifficultySelection();
             SetLevelPanelVisible(true);
+            Canvas.ForceUpdateCanvases();
+            ApplyLevelMenuResponsiveLayout();
         }
 
         public void CloseLevelPanel()
@@ -170,6 +196,8 @@ namespace Mathcalibur.Title
 
             BindButton(_generatedStartBattleButton, StartSelectedBattle);
             startBattleButtonRect.gameObject.SetActive(true);
+            Canvas.ForceUpdateCanvases();
+            ApplyNormalizedAnchoredPosition(startBattleButtonRect);
         }
 
         private void ClearPendingDifficultySelection()
@@ -189,6 +217,138 @@ namespace Mathcalibur.Title
             if (normalButton != null) normalButton.interactable = interactable;
             if (hardButton != null) hardButton.interactable = interactable;
             if (_generatedStartBattleButton != null) _generatedStartBattleButton.interactable = interactable;
+        }
+
+        private void EnsureStartMenuBlackBackground()
+        {
+            var startMenuRoot = startGameButton != null ? startGameButton.transform.parent as RectTransform : null;
+            if (startMenuRoot == null)
+            {
+                return;
+            }
+
+            var parent = startMenuRoot.parent as RectTransform;
+            if (parent == null)
+            {
+                return;
+            }
+
+            _startMenuBlackBackgroundRoot = FindOrCreateFullscreenSolidBackground(parent, startMenuRoot.GetSiblingIndex(), "StartMenuBlackBackgroundRuntime", Color.black);
+        }
+
+        private static RectTransform FindOrCreateFullscreenSolidBackground(RectTransform parent, int siblingIndex, string name, Color color)
+        {
+            if (parent == null)
+            {
+                return null;
+            }
+
+            RectTransform background = null;
+            for (var i = 0; i < parent.childCount; i++)
+            {
+                if (parent.GetChild(i) is RectTransform candidate && candidate.name == name)
+                {
+                    background = candidate;
+                    break;
+                }
+            }
+
+            if (background == null)
+            {
+                var backgroundObject = new GameObject(name, typeof(RectTransform), typeof(Image));
+                backgroundObject.layer = parent.gameObject.layer;
+                background = backgroundObject.GetComponent<RectTransform>();
+                background.SetParent(parent, false);
+            }
+
+            background.SetSiblingIndex(Mathf.Clamp(siblingIndex, 0, parent.childCount - 1));
+            background.anchorMin = Vector2.zero;
+            background.anchorMax = Vector2.one;
+            background.offsetMin = Vector2.zero;
+            background.offsetMax = Vector2.zero;
+            background.localScale = Vector3.one;
+
+            var image = background.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = color;
+                image.raycastTarget = false;
+            }
+
+            return background;
+        }
+
+        private void CacheLevelMenuResponsiveLayout()
+        {
+            _levelMenuContentRoot = easyButton != null
+                ? easyButton.transform.parent as RectTransform
+                : startBattleButtonRect != null
+                    ? startBattleButtonRect.parent as RectTransform
+                    : null;
+
+            CacheNormalizedAnchoredPosition(easyButton != null ? easyButton.transform as RectTransform : null);
+            CacheNormalizedAnchoredPosition(normalButton != null ? normalButton.transform as RectTransform : null);
+            CacheNormalizedAnchoredPosition(hardButton != null ? hardButton.transform as RectTransform : null);
+            CacheNormalizedAnchoredPosition(startBattleButtonRect);
+        }
+
+        private void ApplyLevelMenuResponsiveLayout()
+        {
+            ApplyNormalizedAnchoredPosition(easyButton != null ? easyButton.transform as RectTransform : null);
+            ApplyNormalizedAnchoredPosition(normalButton != null ? normalButton.transform as RectTransform : null);
+            ApplyNormalizedAnchoredPosition(hardButton != null ? hardButton.transform as RectTransform : null);
+            ApplyNormalizedAnchoredPosition(startBattleButtonRect);
+        }
+
+        private IEnumerator ApplyResponsiveLayoutNextFrame()
+        {
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            ApplyLevelMenuResponsiveLayout();
+        }
+
+        private void CacheNormalizedAnchoredPosition(RectTransform rect)
+        {
+            if (rect == null)
+            {
+                return;
+            }
+
+            var parent = rect.parent as RectTransform;
+            if (parent == null)
+            {
+                return;
+            }
+
+            var size = parent.rect.size;
+            if (size.x <= 0f || size.y <= 0f)
+            {
+                return;
+            }
+
+            _normalizedAnchoredPositions[rect] = new Vector2(rect.anchoredPosition.x / size.x, rect.anchoredPosition.y / size.y);
+        }
+
+        private void ApplyNormalizedAnchoredPosition(RectTransform rect)
+        {
+            if (rect == null || !_normalizedAnchoredPositions.TryGetValue(rect, out var normalized))
+            {
+                return;
+            }
+
+            var parent = rect.parent as RectTransform;
+            if (parent == null)
+            {
+                return;
+            }
+
+            var size = parent.rect.size;
+            if (size.x <= 0f || size.y <= 0f)
+            {
+                return;
+            }
+
+            rect.anchoredPosition = new Vector2(normalized.x * size.x, normalized.y * size.y);
         }
 
         private static void BindButton(Button button, UnityEngine.Events.UnityAction callback)
