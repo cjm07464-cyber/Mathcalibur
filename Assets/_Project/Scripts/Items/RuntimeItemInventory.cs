@@ -4,6 +4,14 @@ namespace Mathcalibur.Items
 {
     public sealed class RuntimeItemInventory
     {
+        public sealed class Snapshot
+        {
+            public Dictionary<string, int> AcquisitionCounts { get; set; } = new();
+            public Dictionary<string, int> ActiveItemCounts { get; set; } = new();
+            public List<string> ActiveItemAcquisitionOrder { get; set; } = new();
+            public int PendingNextAttackMultiplierPercent { get; set; }
+        }
+
         private readonly Dictionary<string, int> _acquisitionCounts = new();
         private readonly Dictionary<string, int> _activeItemCounts = new();
         private readonly List<string> _activeItemAcquisitionOrder = new();
@@ -78,6 +86,43 @@ namespace Mathcalibur.Items
         public void ClearPendingAttackMultiplier()
         {
             PendingNextAttackMultiplierPercent = 0;
+        }
+
+        public Snapshot CaptureSnapshot()
+        {
+            return new Snapshot
+            {
+                AcquisitionCounts = new Dictionary<string, int>(_acquisitionCounts),
+                ActiveItemCounts = new Dictionary<string, int>(_activeItemCounts),
+                ActiveItemAcquisitionOrder = new List<string>(_activeItemAcquisitionOrder),
+                PendingNextAttackMultiplierPercent = PendingNextAttackMultiplierPercent,
+            };
+        }
+
+        public void RestoreSnapshot(Snapshot snapshot)
+        {
+            _acquisitionCounts.Clear();
+            _activeItemCounts.Clear();
+            _activeItemAcquisitionOrder.Clear();
+            PendingNextAttackMultiplierPercent = 0;
+
+            if (snapshot == null)
+            {
+                return;
+            }
+
+            foreach (var entry in snapshot.AcquisitionCounts)
+            {
+                _acquisitionCounts[entry.Key] = entry.Value;
+            }
+
+            foreach (var entry in snapshot.ActiveItemCounts)
+            {
+                _activeItemCounts[entry.Key] = entry.Value;
+            }
+
+            _activeItemAcquisitionOrder.AddRange(snapshot.ActiveItemAcquisitionOrder);
+            PendingNextAttackMultiplierPercent = snapshot.PendingNextAttackMultiplierPercent;
         }
     }
 }

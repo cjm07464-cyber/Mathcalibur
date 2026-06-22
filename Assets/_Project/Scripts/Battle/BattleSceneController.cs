@@ -97,6 +97,8 @@ namespace Mathcalibur.Battle
         private RectTransform _shopOverlayRoot;
         private RectTransform _shopPanel;
         private RectTransform _shopDimRoot;
+        private Transform _shopPanelOriginalParent;
+        private int _shopPanelOriginalSiblingIndex;
         private RectTransform _shopConfirmPanel;
         private RectTransform _startUniqueOverlayRoot;
         private RectTransform _startUniquePanel;
@@ -104,6 +106,9 @@ namespace Mathcalibur.Battle
         private RectTransform _activeItemConfirmPanel;
         private RectTransform _defeatOverlayRoot;
         private RectTransform _defeatPanel;
+        private RectTransform _defeatBlackBackgroundRoot;
+        private RectTransform _mobileExitOverlayRoot;
+        private RectTransform _mobileExitPanel;
         private TMP_Text _shopGoldText;
         private TMP_Text _rerollText;
         private TMP_Text _shopConfirmTitleText;
@@ -116,6 +121,7 @@ namespace Mathcalibur.Battle
         private TMP_Text _activeItemConfirmDescriptionText;
         private TMP_Text _defeatTitleText;
         private TMP_Text _defeatDescriptionText;
+        private TMP_Text _defeatMaxDamageText;
         private Button _attackModeButton;
         private Button _defenseModeButton;
         private Button _killEnemyButton;
@@ -124,12 +130,21 @@ namespace Mathcalibur.Battle
         private RectTransform _bagDimRoot;
         private Transform _bagPanelOriginalParent;
         private int _bagPanelOriginalSiblingIndex;
+        private Vector2? _bagButtonNormalizedPosition;
+        private Vector2? _bagPanelNormalizedPosition;
+        private Vector2? _bagButtonLeftAnchoredPosition;
+        private Vector2? _bagPanelLeftAnchoredPosition;
         private readonly List<BattleBoardLayoutReference.BagItemSlotReference> _bagItemSlotReferences = new();
         private Button _percentageButton;
         private RectTransform _percentagePanelRoot;
         private RectTransform _percentageDimRoot;
         private Transform _percentagePanelOriginalParent;
         private int _percentagePanelOriginalSiblingIndex;
+        private Vector2? _percentageButtonNormalizedPosition;
+        private Vector2? _percentagePanelNormalizedPosition;
+        private Vector2? _percentageButtonRightAnchoredPosition;
+        private Vector2? _percentagePanelRightAnchoredPosition;
+        private Vector2? _boardPanelNormalizedPosition;
         private readonly Dictionary<RectTransform, Vector2> _percentageBarBaseSizes = new();
         private bool _freePurchaseDone;
         private bool _isResolvingTurn;
@@ -141,6 +156,7 @@ namespace Mathcalibur.Battle
         private bool _startingUniqueConfirmTransitioning;
         private bool _activeItemConfirmOpen;
         private bool _defeatOverlayOpen;
+        private bool _mobileExitOverlayOpen;
         private int? _pendingStartingUniqueSelectionIndex;
         private string _pendingActiveItemId;
         private ShopSelectionContext? _pendingShopSelection;
@@ -164,6 +180,8 @@ namespace Mathcalibur.Battle
         private readonly Dictionary<Image, Vector3> _slotIconBaseScales = new();
         private int _lastAutoLineClearDamage;
         private bool _usingRuntimeStartingUniqueFallback;
+        private int _highestDamageThisRun;
+        private RuntimeStageSnapshot _stageStartSnapshot;
         private const string SlotIconChildName = "Icon";
         private static readonly string[] SlotAuraChildNames = { "Auta", "Aura" };
 
@@ -213,6 +231,9 @@ namespace Mathcalibur.Battle
         private const string Unique8ItemId = "UNIQUE_8_PERCENT_WEALTH";
         private const string Unique9ItemId = "UNIQUE_9_ODINS_NINE_TRIALS";
 
+        private const float BagResponsiveOffsetX = -0.015f;
+        private const float PercentageResponsiveOffsetX = 0.015f;
+
         private void Awake()
         {
             if (config == null)
@@ -247,6 +268,8 @@ namespace Mathcalibur.Battle
             ResolveAutoLineClears(false);
             InitBattle();
             TryPlayBattleBgmAfterStartingUniqueSelection();
+            ApplyResponsiveScenePositions();
+            StartCoroutine(ApplyResponsiveLayoutNextFrame());
             StartCoroutine(ValidateBattleSceneStartup());
         }
 
@@ -258,11 +281,18 @@ namespace Mathcalibur.Battle
             }
 
             UpdateLayoutRegions();
+            ApplyResponsiveScenePositions();
             RefreshBoardVisualLayout();
         }
 
         private void Update()
         {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                HandleMobileBackButton();
+                return;
+            }
+
             if (_playerHp <= 0 || _enemyHp <= 0 || _shopOpen || _startingUniqueSelectionOpen || _activeItemConfirmOpen || _defeatOverlayOpen || _isResolvingTurn || IsBagPanelOpen() || IsPercentagePanelOpen())
             {
                 return;
@@ -414,7 +444,7 @@ namespace Mathcalibur.Battle
             var bg = _boardRoot.gameObject.AddComponent<Image>();
             bg.sprite = config.BoardBackgroundSprite;
             bg.type = Image.Type.Simple;
-            bg.preserveAspect = config.BoardBackgroundSprite != null;
+            bg.preserveAspect = false;
             bg.color = config.BoardBackgroundSprite != null ? config.BoardBackgroundSpriteTint : config.BoardBackgroundColor;
             bg.raycastTarget = false;
 
@@ -451,9 +481,11 @@ namespace Mathcalibur.Battle
             BuildShopPanel();
             BuildActiveItemConfirmOverlay(canvasRoot);
             BuildDefeatOverlay(canvasRoot);
+            BuildMobileExitOverlay(canvasRoot);
             EnsureShoppingParentsActive();
             HideSceneBoundStartingUniqueLayout();
             HideSceneBoundShopLayout();
+            HideSceneBoundDefeatLayout();
             Canvas.ForceUpdateCanvases();
             ResolveBoardLayoutReference();
             UpdateLayoutRegions();
@@ -571,6 +603,9 @@ namespace Mathcalibur.Battle
                 _startingUniqueButtons.Add(button);
             }
 
+            var backButton = CreateActionButton(_startUniquePanel, "뒤로가기", new Vector2(0.5f, 0.10f), ReturnToTitleScene, false, config.StartingUniqueButtonWidth, config.StartingUniqueButtonHeight, config.ShopFontSizeScale, config.StartingUniqueSelectionButtonStyle);
+            SetButtonTextColor(backButton, config.StartingUniqueButtonTextColor);
+
             BuildStartingUniqueExplainBindings();
             _startUniqueOverlayRoot.gameObject.SetActive(false);
         }
@@ -609,9 +644,54 @@ namespace Mathcalibur.Battle
             }
 
             BuildStartingUniqueExplainBindings();
+            BindButton(ResolveStartingUniqueBackButton(layout), ReturnToTitleScene);
             SetStartingUniqueSelectionAura(null);
             _startUniqueOverlayRoot.gameObject.SetActive(false);
             return true;
+        }
+
+        private Button ResolveStartingUniqueBackButton(BattleBoardLayoutReference.StartingUniqueLayoutReference layout)
+        {
+            if (layout == null)
+            {
+                return null;
+            }
+
+            if (layout.BackButton != null)
+            {
+                return layout.BackButton;
+            }
+
+            var searchRoots = new[] { layout.OverlayRoot, layout.PanelRoot };
+            foreach (var root in searchRoots)
+            {
+                var backTransform = root != null ? root.Find("BackImage") : null;
+                if (backTransform == null)
+                {
+                    continue;
+                }
+
+                var button = backTransform.GetComponent<Button>();
+                if (button == null)
+                {
+                    button = backTransform.gameObject.AddComponent<Button>();
+                }
+
+                var image = backTransform.GetComponent<Image>();
+                if (image != null)
+                {
+                    button.targetGraphic = image;
+                }
+
+                return button;
+            }
+
+            return null;
+        }
+
+        private void ReturnToTitleScene()
+        {
+            SceneManager.LoadScene("TitleScene");
         }
 
         private void HideSceneBoundStartingUniqueLayout()
@@ -620,6 +700,11 @@ namespace Mathcalibur.Battle
             if (layout == null || !layout.HasSceneLayout)
             {
                 return;
+            }
+
+            if (_defeatBlackBackgroundRoot != null)
+            {
+                _defeatBlackBackgroundRoot.gameObject.SetActive(false);
             }
 
             if (layout.PanelRoot != null)
@@ -678,7 +763,7 @@ namespace Mathcalibur.Battle
 
             if (layout.ExitButton != null)
             {
-                BindButton(layout.ExitButton, () => SceneManager.LoadScene("TitleScene"));
+                BindButton(layout.ExitButton, ReturnToTitleScene);
             }
 
             if (_nextStageButton != null)
@@ -700,6 +785,11 @@ namespace Mathcalibur.Battle
             if (layout == null || !layout.HasSceneLayout)
             {
                 return;
+            }
+
+            if (_defeatBlackBackgroundRoot != null)
+            {
+                _defeatBlackBackgroundRoot.gameObject.SetActive(false);
             }
 
             if (layout.PanelRoot != null)
@@ -814,6 +904,11 @@ namespace Mathcalibur.Battle
 
         private void BuildDefeatOverlay(RectTransform canvasRoot)
         {
+            if (TryBuildDefeatSceneLayout())
+            {
+                return;
+            }
+
             _defeatOverlayRoot = CreateUiPanel("DefeatOverlay", canvasRoot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var overlayImage = _defeatOverlayRoot.gameObject.AddComponent<Image>();
             overlayImage.color = new Color(0f, 0f, 0f, 0.78f);
@@ -841,9 +936,19 @@ namespace Mathcalibur.Battle
             _defeatDescriptionText.color = config.ShopPanelTextColor;
             _defeatDescriptionText.text = "다시 시작하거나 메뉴로 나갈 수 있습니다.";
 
-            var restartButton = CreateActionButton(_defeatPanel, "처음부터 다시 하기", new Vector2(0.5f, 0.24f), RestartFromBeginning, false, config.ShopConfirmActionButtonWidth * 1.6f, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
+            _defeatMaxDamageText = CreateText("DefeatMaxDamage", _defeatPanel, new Vector2(0.5f, 0.36f), 24f, config.ShopFontSizeScale);
+            _defeatMaxDamageText.rectTransform.anchorMin = _defeatMaxDamageText.rectTransform.anchorMax = new Vector2(0.5f, 0.36f);
+            _defeatMaxDamageText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            _defeatMaxDamageText.rectTransform.sizeDelta = new Vector2(760f, 60f);
+            _defeatMaxDamageText.alignment = TextAlignmentOptions.Center;
+            _defeatMaxDamageText.color = config.ShopPanelTextColor;
+            _defeatMaxDamageText.text = BuildDefeatMaxDamageText();
+
+            var retryButton = CreateActionButton(_defeatPanel, "현재 스테이지 재도전", new Vector2(0.5f, 0.24f), RetryCurrentStage, false, config.ShopConfirmActionButtonWidth * 1.6f, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
+            SetButtonTextColor(retryButton, config.ShopButtonTextColor);
+            var restartButton = CreateActionButton(_defeatPanel, "처음부터 다시 하기", new Vector2(0.5f, 0.13f), RestartFromBeginning, false, config.ShopConfirmActionButtonWidth * 1.6f, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
             SetButtonTextColor(restartButton, config.ShopButtonTextColor);
-            var menuButton = CreateActionButton(_defeatPanel, "메뉴로 나가기", new Vector2(0.5f, 0.10f), OnMenuButtonPressed, false, config.ShopConfirmActionButtonWidth * 1.6f, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
+            var menuButton = CreateActionButton(_defeatPanel, "타이틀로 돌아가기", new Vector2(0.5f, 0.02f), OnMenuButtonPressed, false, config.ShopConfirmActionButtonWidth * 1.6f, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
             SetButtonTextColor(menuButton, config.ShopButtonTextColor);
 
             _defeatOverlayRoot.gameObject.SetActive(false);
@@ -852,9 +957,170 @@ namespace Mathcalibur.Battle
         private void OpenDefeatOverlay()
         {
             _defeatOverlayOpen = true;
+            SetGameplayInteractionEnabled(false);
+            CloseMobileExitOverlay();
+            CloseBagPanel();
+            ClosePercentagePanel();
+            CloseActiveItemConfirmPanel();
+            CloseShopConfirmPanel();
+            if (_defeatMaxDamageText != null)
+            {
+                _defeatMaxDamageText.text = BuildDefeatMaxDamageText();
+            }
+
+            if (_defeatBlackBackgroundRoot != null)
+            {
+                EnsureHierarchyActive(_defeatBlackBackgroundRoot);
+                _defeatBlackBackgroundRoot.SetAsLastSibling();
+                _defeatBlackBackgroundRoot.gameObject.SetActive(true);
+            }
+
             if (_defeatOverlayRoot != null)
             {
+                EnsureHierarchyActive(_defeatOverlayRoot);
+                _defeatOverlayRoot.SetAsLastSibling();
                 _defeatOverlayRoot.gameObject.SetActive(true);
+            }
+
+            if (_defeatPanel != null)
+            {
+                EnsureHierarchyActive(_defeatPanel);
+                _defeatPanel.gameObject.SetActive(true);
+                _defeatPanel.SetAsLastSibling();
+            }
+
+        }
+
+        private bool TryBuildDefeatSceneLayout()
+        {
+            var layout = _boardLayoutReference?.DefeatLayout;
+            if (layout == null || !layout.HasSceneLayout)
+            {
+                return false;
+            }
+
+            _defeatOverlayRoot = layout.OverlayRoot != null ? layout.OverlayRoot : layout.PanelRoot;
+            _defeatPanel = layout.PanelRoot != null ? layout.PanelRoot : layout.OverlayRoot;
+            _defeatMaxDamageText = layout.MaxDamageText;
+
+            if (_defeatMaxDamageText != null)
+            {
+                _defeatMaxDamageText.text = BuildDefeatMaxDamageText();
+            }
+
+            BindButton(layout.RetryCurrentStageButton, RetryCurrentStage);
+            BindButton(layout.RestartFromBeginningButton, RestartFromBeginning);
+            BindButton(layout.ReturnToTitleButton, OnMenuButtonPressed);
+            BindButton(layout.DebugOpenButton, OpenDefeatOverlayForDebug);
+
+            EnsureDefeatBlackBackground();
+
+            if (_defeatOverlayRoot != null)
+            {
+                _defeatOverlayRoot.gameObject.SetActive(false);
+            }
+
+            if (_defeatBlackBackgroundRoot != null)
+            {
+                _defeatBlackBackgroundRoot.gameObject.SetActive(false);
+            }
+
+            return _defeatOverlayRoot != null || _defeatPanel != null;
+        }
+
+        private void EnsureDefeatBlackBackground()
+        {
+            var backgroundSource = _defeatOverlayRoot != null ? _defeatOverlayRoot : _defeatPanel;
+            if (backgroundSource == null)
+            {
+                return;
+            }
+
+            var parent = backgroundSource.parent as RectTransform;
+            if (parent == null)
+            {
+                return;
+            }
+
+            _defeatBlackBackgroundRoot = FindOrCreateFullscreenSolidBackground(parent, backgroundSource.GetSiblingIndex(), "DefeatBlackBackgroundRuntime", Color.black);
+        }
+
+        private static RectTransform FindOrCreateFullscreenSolidBackground(RectTransform parent, int siblingIndex, string name, Color color)
+        {
+            if (parent == null)
+            {
+                return null;
+            }
+
+            RectTransform background = null;
+            for (var i = 0; i < parent.childCount; i++)
+            {
+                if (parent.GetChild(i) is RectTransform candidate && candidate.name == name)
+                {
+                    background = candidate;
+                    break;
+                }
+            }
+
+            if (background == null)
+            {
+                var backgroundObject = new GameObject(name, typeof(RectTransform), typeof(Image));
+                backgroundObject.layer = parent.gameObject.layer;
+                background = backgroundObject.GetComponent<RectTransform>();
+                background.SetParent(parent, false);
+            }
+
+            background.SetSiblingIndex(Mathf.Clamp(siblingIndex, 0, parent.childCount - 1));
+            background.anchorMin = Vector2.zero;
+            background.anchorMax = Vector2.one;
+            background.offsetMin = Vector2.zero;
+            background.offsetMax = Vector2.zero;
+            background.localScale = Vector3.one;
+
+            var image = background.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = color;
+                image.raycastTarget = false;
+            }
+
+            return background;
+        }
+
+        private void HideSceneBoundDefeatLayout()
+        {
+            var layout = _boardLayoutReference?.DefeatLayout;
+            if (layout == null || !layout.HasSceneLayout)
+            {
+                return;
+            }
+
+            if (_defeatBlackBackgroundRoot != null)
+            {
+                _defeatBlackBackgroundRoot.gameObject.SetActive(false);
+            }
+
+            if (layout.PanelRoot != null)
+            {
+                layout.PanelRoot.gameObject.SetActive(false);
+            }
+
+            if (layout.OverlayRoot != null)
+            {
+                layout.OverlayRoot.gameObject.SetActive(false);
+            }
+        }
+
+        private void HideDefeatOverlayVisuals()
+        {
+            if (_defeatOverlayRoot != null)
+            {
+                _defeatOverlayRoot.gameObject.SetActive(false);
+            }
+
+            if (_defeatBlackBackgroundRoot != null)
+            {
+                _defeatBlackBackgroundRoot.gameObject.SetActive(false);
             }
         }
 
@@ -879,11 +1145,14 @@ namespace Mathcalibur.Battle
             _startingUniqueSelectionResolved = false;
             _activeItemConfirmOpen = false;
             _defeatOverlayOpen = false;
+            _mobileExitOverlayOpen = false;
             _pendingStartingUniqueSelectionIndex = null;
             _pendingActiveItemId = null;
             _pendingShopSelection = null;
             _dragging = false;
             _startingUniqueCandidates.Clear();
+            _highestDamageThisRun = 0;
+            _stageStartSnapshot = null;
 
             if (_shopOverlayRoot != null)
             {
@@ -893,6 +1162,7 @@ namespace Mathcalibur.Battle
             SetDimOverlayVisible(_shopConfirmDimRoot, false);
             SetDimOverlayVisible(_bagDimRoot, false);
             SetDimOverlayVisible(_percentageDimRoot, false);
+            RestoreShopPanelParent();
 
             if (_startUniqueOverlayRoot != null)
             {
@@ -907,9 +1177,11 @@ namespace Mathcalibur.Battle
                 _activeItemConfirmOverlayRoot.gameObject.SetActive(false);
             }
 
-            if (_defeatOverlayRoot != null)
+            HideDefeatOverlayVisuals();
+
+            if (_mobileExitOverlayRoot != null)
             {
-                _defeatOverlayRoot.gameObject.SetActive(false);
+                _mobileExitOverlayRoot.gameObject.SetActive(false);
             }
 
             _playerState = new RuntimePlayerState();
@@ -930,9 +1202,166 @@ namespace Mathcalibur.Battle
             InitBattle();
         }
 
+        private void RetryCurrentStage()
+        {
+            if (_stageStartSnapshot == null)
+            {
+                RestartFromBeginning();
+                return;
+            }
+
+            if (_cameraShakeCoroutine != null)
+            {
+                StopCoroutine(_cameraShakeCoroutine);
+                _cameraShakeCoroutine = null;
+            }
+
+            if (_shakeCamera != null)
+            {
+                _shakeCamera.transform.localRotation = _cameraOriginalLocalRotation;
+            }
+
+            _isResolvingTurn = false;
+            _shopOpen = false;
+            _shopSelectionMade = false;
+            _freePurchaseDone = false;
+            _startingUniqueSelectionOpen = false;
+            _activeItemConfirmOpen = false;
+            _defeatOverlayOpen = false;
+            _mobileExitOverlayOpen = false;
+            _pendingStartingUniqueSelectionIndex = null;
+            _pendingActiveItemId = null;
+            _pendingShopSelection = null;
+            _dragging = false;
+            _startingUniqueCandidates.Clear();
+
+            if (_shopOverlayRoot != null)
+            {
+                _shopOverlayRoot.gameObject.SetActive(false);
+            }
+
+            if (_startUniqueOverlayRoot != null)
+            {
+                ClearStartingUniqueExplainTexts();
+                _startUniqueOverlayRoot.gameObject.SetActive(false);
+            }
+
+            if (_activeItemConfirmOverlayRoot != null)
+            {
+                _activeItemConfirmOverlayRoot.gameObject.SetActive(false);
+            }
+
+            HideDefeatOverlayVisuals();
+
+            if (_mobileExitOverlayRoot != null)
+            {
+                _mobileExitOverlayRoot.gameObject.SetActive(false);
+            }
+
+            SetDimOverlayVisible(_shopDimRoot, false);
+            SetDimOverlayVisible(_shopConfirmDimRoot, false);
+            SetDimOverlayVisible(_bagDimRoot, false);
+            SetDimOverlayVisible(_percentageDimRoot, false);
+            RestoreShopPanelParent();
+            CloseBagPanel();
+            ClosePercentagePanel();
+            RestoreStageStartSnapshot();
+            SetGameplayInteractionEnabled(true);
+            ResetStageLocalBattleState();
+            InitBattle();
+        }
+
         private void OnMenuButtonPressed()
         {
-            _hud.SetMessage("메뉴는 아직 준비되지 않았습니다.");
+            ReturnToTitleScene();
+        }
+
+        private void OpenDefeatOverlayForDebug()
+        {
+            if (_shopOpen || _startingUniqueSelectionOpen || _activeItemConfirmOpen || _defeatOverlayOpen || _isResolvingTurn)
+            {
+                return;
+            }
+
+            _playerHp = 0;
+            RefreshHud(string.Empty, "-");
+            _hud.SetMessage("Defeat!");
+            OpenDefeatOverlay();
+        }
+
+        private void BuildMobileExitOverlay(RectTransform canvasRoot)
+        {
+            _mobileExitOverlayRoot = CreateUiPanel("MobileExitOverlay", canvasRoot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var overlayImage = _mobileExitOverlayRoot.gameObject.AddComponent<Image>();
+            overlayImage.color = new Color(0f, 0f, 0f, 0.78f);
+            overlayImage.raycastTarget = true;
+
+            _mobileExitPanel = CreateUiPanel("MobileExitPanel", _mobileExitOverlayRoot, new Vector2(0.18f, 0.34f), new Vector2(0.82f, 0.64f), Vector2.zero, Vector2.zero);
+            var panelImage = _mobileExitPanel.gameObject.AddComponent<Image>();
+            panelImage.color = config.ShopConfirmPanelColor;
+
+            var titleText = CreateText("MobileExitTitle", _mobileExitPanel, new Vector2(0.5f, 0.70f), 38f, config.ShopFontSizeScale);
+            titleText.alignment = TextAlignmentOptions.Center;
+            titleText.color = config.ShopPanelTextColor;
+            titleText.text = "게임을 종료할까요?";
+
+            var cancelButton = CreateActionButton(_mobileExitPanel, "취소", new Vector2(0.30f, 0.22f), CloseMobileExitOverlay, false, config.ShopConfirmActionButtonWidth, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
+            var quitButton = CreateActionButton(_mobileExitPanel, "종료", new Vector2(0.70f, 0.22f), QuitApplication, false, config.ShopConfirmActionButtonWidth, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
+            SetButtonTextColor(cancelButton, config.ShopButtonTextColor);
+            SetButtonTextColor(quitButton, config.ShopButtonTextColor);
+
+            _mobileExitOverlayRoot.gameObject.SetActive(false);
+        }
+
+        private void HandleMobileBackButton()
+        {
+            if (_mobileExitOverlayOpen)
+            {
+                CloseMobileExitOverlay();
+                return;
+            }
+
+            if (_defeatOverlayOpen || _activeItemConfirmOpen || _shopOpen || _startingUniqueSelectionOpen || _isResolvingTurn)
+            {
+                return;
+            }
+
+            OpenMobileExitOverlay();
+        }
+
+        private void OpenMobileExitOverlay()
+        {
+            if (_mobileExitOverlayRoot == null)
+            {
+                return;
+            }
+
+            _mobileExitOverlayOpen = true;
+            CloseBagPanel();
+            ClosePercentagePanel();
+            _mobileExitOverlayRoot.SetAsLastSibling();
+            _mobileExitOverlayRoot.gameObject.SetActive(true);
+            if (_mobileExitPanel != null)
+            {
+                _mobileExitPanel.SetAsLastSibling();
+            }
+        }
+
+        private void CloseMobileExitOverlay()
+        {
+            _mobileExitOverlayOpen = false;
+            if (_mobileExitOverlayRoot != null)
+            {
+                _mobileExitOverlayRoot.gameObject.SetActive(false);
+            }
+        }
+
+        private static void QuitApplication()
+        {
+            Application.Quit();
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#endif
         }
 
         private void BuildStartingUniqueExplainBindings()
@@ -966,10 +1395,14 @@ namespace Mathcalibur.Battle
             if (_bagButton != null)
             {
                 BindButton(_bagButton, ToggleBagPanel);
+                _bagButtonNormalizedPosition = CaptureNormalizedPivotPosition(_bagButton.transform as RectTransform, GetTopOverlayParent());
+                _bagButtonLeftAnchoredPosition = CaptureAnchoredPositionForCurrentAnchor(_bagButton.transform as RectTransform);
             }
 
             if (_bagPanelRoot != null)
             {
+                _bagPanelNormalizedPosition = CaptureNormalizedPivotPosition(_bagPanelRoot, GetTopOverlayParent());
+                _bagPanelLeftAnchoredPosition = CaptureAnchoredPositionForCurrentAnchor(_bagPanelRoot);
                 _bagPanelOriginalParent = _bagPanelRoot.parent;
                 _bagPanelOriginalSiblingIndex = _bagPanelRoot.GetSiblingIndex();
                 BindPanelClickToClose(_bagPanelRoot, CloseBagPanel);
@@ -1020,6 +1453,7 @@ namespace Mathcalibur.Battle
 
                 SetDimOverlayVisible(_bagDimRoot, true);
                 BringPanelToFront(_bagPanelRoot, ref _bagPanelOriginalParent, ref _bagPanelOriginalSiblingIndex);
+                ApplyNormalizedPivotPosition(_bagPanelRoot, GetTopOverlayParent(), NudgeNormalizedX(_bagPanelNormalizedPosition, BagResponsiveOffsetX));
             }
             else
             {
@@ -1062,6 +1496,8 @@ namespace Mathcalibur.Battle
             if (_percentageButton != null)
             {
                 BindButton(_percentageButton, TogglePercentagePanel);
+                _percentageButtonNormalizedPosition = CaptureNormalizedPivotPosition(_percentageButton.transform as RectTransform, GetTopOverlayParent());
+                _percentageButtonRightAnchoredPosition = CaptureAnchoredPositionForCurrentAnchor(_percentageButton.transform as RectTransform);
             }
 
             if (_percentagePanelRoot != null)
@@ -1080,6 +1516,8 @@ namespace Mathcalibur.Battle
 
             if (_percentagePanelRoot != null)
             {
+                _percentagePanelNormalizedPosition = CaptureNormalizedPivotPosition(_percentagePanelRoot, GetTopOverlayParent());
+                _percentagePanelRightAnchoredPosition = CaptureAnchoredPositionForCurrentAnchor(_percentagePanelRoot);
                 _percentagePanelOriginalParent = _percentagePanelRoot.parent;
                 _percentagePanelOriginalSiblingIndex = _percentagePanelRoot.GetSiblingIndex();
                 _percentagePanelRoot.gameObject.SetActive(false);
@@ -1102,6 +1540,7 @@ namespace Mathcalibur.Battle
             {
                 SetDimOverlayVisible(_percentageDimRoot, true);
                 BringPanelToFront(_percentagePanelRoot, ref _percentagePanelOriginalParent, ref _percentagePanelOriginalSiblingIndex);
+                ApplyNormalizedPivotPosition(_percentagePanelRoot, GetTopOverlayParent(), NudgeNormalizedX(_percentagePanelNormalizedPosition, PercentageResponsiveOffsetX));
             }
             else
             {
@@ -1120,6 +1559,36 @@ namespace Mathcalibur.Battle
             SetDimOverlayVisible(_percentageDimRoot, false);
             _percentagePanelRoot.gameObject.SetActive(false);
             RestorePanelParent(_percentagePanelRoot, _percentagePanelOriginalParent, _percentagePanelOriginalSiblingIndex);
+        }
+
+        private void ApplyResponsiveScenePositions()
+        {
+            var topOverlayParent = GetTopOverlayParent();
+            ApplyNormalizedPivotPosition(_bagButton != null ? _bagButton.transform as RectTransform : null, topOverlayParent, NudgeNormalizedX(_bagButtonNormalizedPosition, BagResponsiveOffsetX));
+            ApplyNormalizedPivotPosition(_percentageButton != null ? _percentageButton.transform as RectTransform : null, topOverlayParent, NudgeNormalizedX(_percentageButtonNormalizedPosition, PercentageResponsiveOffsetX));
+
+            if (_tileLayoutRoot != null && _tileLayoutRoot != _boardRoot)
+            {
+                ApplyNormalizedPivotPosition(_tileLayoutRoot, topOverlayParent, _boardPanelNormalizedPosition);
+            }
+
+            if (IsBagPanelOpen())
+            {
+                ApplyNormalizedPivotPosition(_bagPanelRoot, topOverlayParent, NudgeNormalizedX(_bagPanelNormalizedPosition, BagResponsiveOffsetX));
+            }
+
+            if (IsPercentagePanelOpen())
+            {
+                ApplyNormalizedPivotPosition(_percentagePanelRoot, topOverlayParent, NudgeNormalizedX(_percentagePanelNormalizedPosition, PercentageResponsiveOffsetX));
+            }
+
+        }
+
+        private IEnumerator ApplyResponsiveLayoutNextFrame()
+        {
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            ApplyResponsiveScenePositions();
         }
 
         private bool IsPercentagePanelOpen()
@@ -1226,6 +1695,17 @@ namespace Mathcalibur.Battle
             panelRoot.SetSiblingIndex(safeIndex);
         }
 
+        private void RestoreShopPanelParent()
+        {
+            var shopFrontTarget = _shopPanel != null ? _shopPanel : _shopOverlayRoot;
+            if (shopFrontTarget == null)
+            {
+                return;
+            }
+
+            RestorePanelParent(shopFrontTarget, _shopPanelOriginalParent, _shopPanelOriginalSiblingIndex);
+        }
+
         private RectTransform EnsureFullscreenDimOverlay(RectTransform existingOverlay, string name, Color color)
         {
             if (existingOverlay != null)
@@ -1253,6 +1733,61 @@ namespace Mathcalibur.Battle
                 : _boardRoot != null
                     ? _boardRoot.parent as RectTransform
                     : null;
+        }
+
+        private static Vector2? CaptureNormalizedPivotPosition(RectTransform rect, RectTransform referenceParent)
+        {
+            if (rect == null || referenceParent == null)
+            {
+                return null;
+            }
+
+            var parentSize = referenceParent.rect.size;
+            if (parentSize.x <= 0f || parentSize.y <= 0f)
+            {
+                return null;
+            }
+
+            var worldPivot = rect.TransformPoint(new Vector3(rect.rect.xMin + rect.rect.width * rect.pivot.x, rect.rect.yMin + rect.rect.height * rect.pivot.y, 0f));
+            var localPivot = referenceParent.InverseTransformPoint(worldPivot);
+            var normalizedX = Mathf.InverseLerp(referenceParent.rect.xMin, referenceParent.rect.xMax, localPivot.x);
+            var normalizedY = Mathf.InverseLerp(referenceParent.rect.yMin, referenceParent.rect.yMax, localPivot.y);
+            return new Vector2(normalizedX, normalizedY);
+        }
+
+        private static Vector2? CaptureAnchoredPositionForCurrentAnchor(RectTransform rect)
+        {
+            if (rect == null)
+            {
+                return null;
+            }
+
+            return rect.anchoredPosition;
+        }
+
+        private static Vector2? NudgeNormalizedX(Vector2? normalizedPosition, float deltaX)
+        {
+            if (!normalizedPosition.HasValue)
+            {
+                return null;
+            }
+
+            var value = normalizedPosition.Value;
+            value.x = Mathf.Clamp01(value.x + deltaX);
+            return value;
+        }
+
+        private static void ApplyNormalizedPivotPosition(RectTransform rect, RectTransform referenceParent, Vector2? normalizedPosition)
+        {
+            if (rect == null || referenceParent == null || !normalizedPosition.HasValue)
+            {
+                return;
+            }
+
+            var normalized = normalizedPosition.Value;
+            rect.anchorMin = normalized;
+            rect.anchorMax = normalized;
+            rect.anchoredPosition = Vector2.zero;
         }
 
         private static void EnsureDimOverlayVisual(RectTransform overlay, Color color)
@@ -1341,6 +1876,11 @@ namespace Mathcalibur.Battle
 
             Canvas.ForceUpdateCanvases();
             var boardHeight = _boardContainer.gameObject.activeSelf ? _boardContainer.rect.height : 0f;
+            _boardContainer.anchoredPosition = Vector2.zero;
+            if (_tileLayoutRoot != null && _tileLayoutRoot != _boardRoot)
+            {
+                ApplyNormalizedPivotPosition(_tileLayoutRoot, GetTopOverlayParent(), _boardPanelNormalizedPosition);
+            }
             _gameplayContainer.anchorMin = new Vector2(0f, 0f);
             _gameplayContainer.anchorMax = new Vector2(1f, 1f);
             _gameplayContainer.pivot = new Vector2(0.5f, 0.5f);
@@ -1436,6 +1976,7 @@ namespace Mathcalibur.Battle
             RefreshHud(string.Empty, "-");
             _hud.SetMessage($"Stage {_playerState.CurrentStage}: {_currentStage.EnemyName}");
             EnsureStartingUniqueSelection();
+            CaptureStageStartSnapshotIfReady();
         }
 
         private void ApplyEnemyVisual(EnemyType enemyType)
@@ -1768,6 +2309,7 @@ namespace Mathcalibur.Battle
             }
 
             yield return ResolveBoard();
+            UpdateHighestDamageThisRun(dealtDamage + _lastAutoLineClearDamage);
 
             RefreshHud(string.Empty, resultText);
             _hud.SetMessage(BuildBoardResolutionMessage(resultMessage));
@@ -2184,8 +2726,15 @@ namespace Mathcalibur.Battle
         {
             if (!HasUniqueItem(Unique4ItemId) || !_itemDatabase.TryGetItem(Unique4ItemId, out var unique4))
             {
-                var totalDefaultRatio = Mathf.Max(1, config.DefaultNumberSpawnRatio + config.DefaultOperatorSpawnRatio);
-                return Mathf.Clamp01(config.DefaultNumberSpawnRatio / (float)totalDefaultRatio);
+                var isDefaultACell = (x + y) % 2 == 0;
+                var defaultNumberRatio = isDefaultACell
+                    ? config.DefaultNumberSpawnRatio
+                    : config.DefaultOperatorSpawnRatio;
+                var defaultOperatorRatio = isDefaultACell
+                    ? config.DefaultOperatorSpawnRatio
+                    : config.DefaultNumberSpawnRatio;
+                var totalDefaultRatio = Mathf.Max(1, defaultNumberRatio + defaultOperatorRatio);
+                return Mathf.Clamp01(defaultNumberRatio / (float)totalDefaultRatio);
             }
 
             var isACell = (x + y) % 2 == 0;
@@ -2530,6 +3079,80 @@ namespace Mathcalibur.Battle
         {
             SetCanvasGroupInteraction(_boardContainer, enabled);
             SetCanvasGroupInteraction(_gameplayContainer, enabled);
+        }
+
+        private void UpdateHighestDamageThisRun(int damage)
+        {
+            if (damage <= _highestDamageThisRun)
+            {
+                return;
+            }
+
+            _highestDamageThisRun = damage;
+            if (_defeatMaxDamageText != null)
+            {
+                _defeatMaxDamageText.text = BuildDefeatMaxDamageText();
+            }
+        }
+
+        private string BuildDefeatMaxDamageText()
+        {
+            return _highestDamageThisRun.ToString();
+        }
+
+        private void CaptureStageStartSnapshotIfReady()
+        {
+            if (_startingUniqueSelectionOpen || _playerState == null || _runtimeItemInventory == null)
+            {
+                return;
+            }
+
+            _stageStartSnapshot = new RuntimeStageSnapshot
+            {
+                CurrentStage = _playerState.CurrentStage,
+                Gold = _playerState.Gold,
+                RerollUsedCountThisRun = _playerState.RerollUsedCountThisRun,
+                PlayerHp = _playerHp,
+                CurrentPlayerMaxHp = _currentPlayerMaxHp,
+                CurrentMaxConnectionLength = _currentMaxConnectionLength,
+                NumberWeightModifiers = new Dictionary<int, int>(_numberWeightModifiers),
+                OperatorWeightModifiers = new Dictionary<string, int>(_operatorWeightModifiers, StringComparer.Ordinal),
+                InventorySnapshot = _runtimeItemInventory.CaptureSnapshot(),
+            };
+        }
+
+        private void RestoreStageStartSnapshot()
+        {
+            if (_stageStartSnapshot == null)
+            {
+                return;
+            }
+
+            _playerState ??= new RuntimePlayerState();
+            _runtimeItemInventory ??= new RuntimeItemInventory();
+
+            _playerState.CurrentStage = _stageStartSnapshot.CurrentStage;
+            _playerState.Gold = _stageStartSnapshot.Gold;
+            _playerState.RerollUsedCountThisRun = _stageStartSnapshot.RerollUsedCountThisRun;
+            _playerHp = _stageStartSnapshot.PlayerHp;
+            _currentPlayerMaxHp = _stageStartSnapshot.CurrentPlayerMaxHp;
+            _currentMaxConnectionLength = _stageStartSnapshot.CurrentMaxConnectionLength;
+
+            _numberWeightModifiers.Clear();
+            foreach (var entry in _stageStartSnapshot.NumberWeightModifiers)
+            {
+                _numberWeightModifiers[entry.Key] = entry.Value;
+            }
+
+            _operatorWeightModifiers.Clear();
+            foreach (var entry in _stageStartSnapshot.OperatorWeightModifiers)
+            {
+                _operatorWeightModifiers[entry.Key] = entry.Value;
+            }
+
+            _runtimeItemInventory.RestoreSnapshot(_stageStartSnapshot.InventorySnapshot);
+            _startingUniqueSelectionResolved = true;
+            RebuildCachedSpawnWeights();
         }
 
         private static void SetCanvasGroupInteraction(Component target, bool enabled)
@@ -2927,6 +3550,12 @@ namespace Mathcalibur.Battle
                 ? _boardLayoutReference.TilePanel
                 : _boardRoot;
 
+            if (_tileLayoutRoot != null && _tileLayoutRoot != _boardRoot)
+            {
+                _boardPanelNormalizedPosition = CaptureNormalizedPivotPosition(_tileLayoutRoot, GetTopOverlayParent());
+                ApplyNormalizedPivotPosition(_tileLayoutRoot, GetTopOverlayParent(), _boardPanelNormalizedPosition);
+            }
+
             if (_boardContainer != null)
             {
                 var usesExternalPanel = _tileLayoutRoot != null && _tileLayoutRoot != _boardRoot;
@@ -3121,14 +3750,23 @@ namespace Mathcalibur.Battle
                 _startUniqueOverlayRoot.gameObject.SetActive(false);
             }
             SetDimOverlayVisible(_shopDimRoot, true);
-            EnsureHierarchyActive(_shopOverlayRoot);
-            if (_shopPanel != null)
+
+            var shopFrontTarget = _shopPanel != null ? _shopPanel : _shopOverlayRoot;
+            if (_shopOverlayRoot != null && _shopOverlayRoot != shopFrontTarget)
             {
-                EnsureHierarchyActive(_shopPanel);
+                EnsureHierarchyActive(_shopOverlayRoot);
+                _shopOverlayRoot.gameObject.SetActive(true);
             }
-            _shopOverlayRoot.gameObject.SetActive(true);
-            PlaceDimOverlayBehind(_shopDimRoot, _shopOverlayRoot);
-            _shopOverlayRoot.SetAsLastSibling();
+
+            if (shopFrontTarget != null)
+            {
+                EnsureHierarchyActive(shopFrontTarget);
+                shopFrontTarget.gameObject.SetActive(true);
+                BringPanelToFront(shopFrontTarget, ref _shopPanelOriginalParent, ref _shopPanelOriginalSiblingIndex);
+                PlaceDimOverlayBehind(_shopDimRoot, shopFrontTarget);
+                shopFrontTarget.SetAsLastSibling();
+            }
+
             RollShop();
         }
 
@@ -4337,7 +4975,11 @@ namespace Mathcalibur.Battle
             CloseShopConfirmPanel();
             _shopOpen = false;
             SetDimOverlayVisible(_shopDimRoot, false);
-            _shopOverlayRoot.gameObject.SetActive(false);
+            if (_shopOverlayRoot != null)
+            {
+                _shopOverlayRoot.gameObject.SetActive(false);
+            }
+            RestoreShopPanelParent();
             _playerState.CurrentStage++;
             ResetStageLocalBattleState();
             InitBattle();
@@ -4492,15 +5134,17 @@ namespace Mathcalibur.Battle
             var numberBars = percentageLayout.NumberBars ?? Array.Empty<BattleBoardLayoutReference.WeightBarReference>();
             for (var i = 0; i < numberBars.Length; i++)
             {
-                var rect = numberBars[i]?.ImageRect;
+                var barReference = numberBars[i];
+                var rect = barReference?.ImageRect;
                 var weight = _cachedNumberWeights.TryGetValue(i + 1, out var numberWeight) ? numberWeight : 0;
                 ApplyPercentageBarSize(rect, weight, totalNumberWeight, true);
+                ApplyPercentageValueText(barReference?.PercentageText, weight, totalNumberWeight);
             }
 
-            ApplyPercentageBarSize(percentageLayout.AddBar?.ImageRect, GetOperatorWeight("+"), totalOperatorWeight, false);
-            ApplyPercentageBarSize(percentageLayout.SubtractBar?.ImageRect, GetOperatorWeight("-"), totalOperatorWeight, false);
-            ApplyPercentageBarSize(percentageLayout.MultiplyBar?.ImageRect, GetOperatorWeight("x"), totalOperatorWeight, false);
-            ApplyPercentageBarSize(percentageLayout.DivideBar?.ImageRect, GetOperatorWeight("÷"), totalOperatorWeight, false);
+            ApplyPercentageBar(percentageLayout.AddBar, GetOperatorWeight("+"), totalOperatorWeight, false);
+            ApplyPercentageBar(percentageLayout.SubtractBar, GetOperatorWeight("-"), totalOperatorWeight, false);
+            ApplyPercentageBar(percentageLayout.MultiplyBar, GetOperatorWeight("x"), totalOperatorWeight, false);
+            ApplyPercentageBar(percentageLayout.DivideBar, GetOperatorWeight("÷"), totalOperatorWeight, false);
         }
 
         private int GetOperatorWeight(string symbol)
@@ -4519,6 +5163,28 @@ namespace Mathcalibur.Battle
             rect.sizeDelta = vertical
                 ? new Vector2(baseSize.x, baseSize.y * normalized)
                 : new Vector2(baseSize.x * normalized, baseSize.y);
+        }
+
+        private void ApplyPercentageBar(BattleBoardLayoutReference.WeightBarReference barReference, int currentWeight, int maxWeight, bool vertical)
+        {
+            if (barReference == null)
+            {
+                return;
+            }
+
+            ApplyPercentageBarSize(barReference.ImageRect, currentWeight, maxWeight, vertical);
+            ApplyPercentageValueText(barReference.PercentageText, currentWeight, maxWeight);
+        }
+
+        private static void ApplyPercentageValueText(TMP_Text text, int currentWeight, int maxWeight)
+        {
+            if (text == null)
+            {
+                return;
+            }
+
+            var percent = maxWeight <= 0 ? 0 : Mathf.RoundToInt(currentWeight * 100f / maxWeight);
+            text.text = $"{percent}%";
         }
 
         private StageDefinition GetStageDefinition(int stage)
@@ -4822,6 +5488,19 @@ namespace Mathcalibur.Battle
             public int CurrentStage = 1;
             public int Gold;
             public int RerollUsedCountThisRun;
+        }
+
+        private sealed class RuntimeStageSnapshot
+        {
+            public int CurrentStage;
+            public int Gold;
+            public int RerollUsedCountThisRun;
+            public int PlayerHp;
+            public int CurrentPlayerMaxHp;
+            public int CurrentMaxConnectionLength;
+            public Dictionary<int, int> NumberWeightModifiers = new();
+            public Dictionary<string, int> OperatorWeightModifiers = new(StringComparer.Ordinal);
+            public RuntimeItemInventory.Snapshot InventorySnapshot;
         }
 
         private sealed class ShopSlotData
