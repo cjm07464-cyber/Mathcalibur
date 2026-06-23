@@ -162,6 +162,10 @@ public class BattleAnimationManager : MonoBehaviour
 
     [Header("Optional Audio")]
     [SerializeField] private AudioSource sfxSource;
+    [SerializeField] private AudioClip enemyHitSfx;
+    [SerializeField] private AudioClip lightAttackSfx;
+    [SerializeField] private AudioClip mediumAttackSfx;
+    [SerializeField] private AudioClip heavyAttackSfx;
 
     [Header("Attack Profiles")]
     [SerializeField]
@@ -255,6 +259,11 @@ public class BattleAnimationManager : MonoBehaviour
         if (sfxSource == null)
         {
             sfxSource = GetComponent<AudioSource>();
+        }
+
+        if (sfxSource == null)
+        {
+            sfxSource = gameObject.AddComponent<AudioSource>();
         }
     }
 
@@ -395,7 +404,7 @@ public class BattleAnimationManager : MonoBehaviour
         {
             playerAnimator.SetTrigger(profile.playerTriggerName);
         }
-        PlaySfx(profile.attackSfx);
+        PlaySfx(GetAttackSfx(profile));
 
         List<TimelineEvent> timeline = BuildTimeline(profile);
         timeline.Sort(CompareTimelineEvents);
@@ -513,7 +522,7 @@ public class BattleAnimationManager : MonoBehaviour
 
             case TimelineEventType.EnemyHit:
                 PlayEnemyHit(timelineEvent.HitReactionEvent);
-                PlaySfx(timelineEvent.HitReactionEvent != null ? timelineEvent.HitReactionEvent.hitSfx : profile.hitSfx);
+                PlaySfx(GetEnemyHitSfx(profile, timelineEvent.HitReactionEvent));
                 SpawnVfx(
                     timelineEvent.HitReactionEvent != null ? timelineEvent.HitReactionEvent.hitVfxPrefab : profile.hitVfxPrefab,
                     timelineEvent.HitReactionEvent != null && timelineEvent.HitReactionEvent.hitVfxSpawnPointOverride != null ? timelineEvent.HitReactionEvent.hitVfxSpawnPointOverride : enemyHitVfxPoint,
@@ -538,6 +547,51 @@ public class BattleAnimationManager : MonoBehaviour
             default:
                 return lightAttack;
         }
+    }
+
+    private AudioClip GetAttackSfx(AttackAnimationProfile profile)
+    {
+        if (profile == null)
+        {
+            return null;
+        }
+
+        if (profile.attackSfx != null)
+        {
+            return profile.attackSfx;
+        }
+
+        if (ReferenceEquals(profile, lightAttack))
+        {
+            return lightAttackSfx;
+        }
+
+        if (ReferenceEquals(profile, mediumAttack))
+        {
+            return mediumAttackSfx;
+        }
+
+        if (ReferenceEquals(profile, heavyAttack))
+        {
+            return heavyAttackSfx;
+        }
+
+        return null;
+    }
+
+    private AudioClip GetEnemyHitSfx(AttackAnimationProfile profile, HitReactionEvent hitEvent)
+    {
+        if (hitEvent != null && hitEvent.hitSfx != null)
+        {
+            return hitEvent.hitSfx;
+        }
+
+        if (profile != null && profile.hitSfx != null)
+        {
+            return profile.hitSfx;
+        }
+
+        return enemyHitSfx;
     }
 
     private void PlayEnemyHit(HitReactionEvent hitEvent = null)

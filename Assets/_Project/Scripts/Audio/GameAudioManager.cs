@@ -5,6 +5,8 @@ namespace Mathcalibur.Audio
 {
     public class GameAudioManager : MonoBehaviour
     {
+        private const float GeneralTouchButtonSuppressSeconds = 2f;
+
         public static GameAudioManager Instance { get; private set; }
 
         [Header("Audio Sources")]
@@ -20,8 +22,18 @@ namespace Mathcalibur.Audio
         [SerializeField] private AudioClip tileSelectSfx;
         [SerializeField] private AudioClip expressionConfirmSfx;
         [SerializeField] private AudioClip invalidSelectionSfx;
+        [SerializeField] private AudioClip generalTouchSfx;
+        [SerializeField] private AudioClip dragTouchSfx;
+        [SerializeField] private AudioClip releaseTouchSfx;
+        [SerializeField] private AudioClip stageVictorySfx;
+        [SerializeField] private AudioClip defeatSfx;
+        [SerializeField] private AudioClip combatModeSwitchSfx;
 
+        [SerializeField, Range(0f, 1f)] private float generalTouchVolume = 0.9f;
+        [SerializeField, Range(0f, 1f)] private float dragTouchVolume = 0.35f;
+        [SerializeField, Range(0f, 1f)] private float releaseTouchVolume = 0.7f;
         private float _defaultMusicVolume = 1f;
+        private float _lastGeneralTouchSfxTime = -999f;
 
         private void Awake()
         {
@@ -39,10 +51,40 @@ namespace Mathcalibur.Audio
 
         public void PlayTitleBgm() => PlayMusic(titleBgm);
         public void PlayBattleBgm() => PlayMusic(battleBgm);
-        public void PlayButtonClickSfx() => PlayUiSfx(buttonClickSfx);
+        public void PlayButtonClickSfx()
+        {
+            if (generalTouchSfx != null)
+            {
+                if (Time.unscaledTime - _lastGeneralTouchSfxTime > GeneralTouchButtonSuppressSeconds)
+                {
+                    PlayGeneralTouchSfx();
+                }
+
+                return;
+            }
+
+            PlayUiSfx(buttonClickSfx);
+        }
+
         public void PlayTileSelectSfx() => PlayUiSfx(tileSelectSfx);
         public void PlayExpressionConfirmSfx() => PlayUiSfx(expressionConfirmSfx);
         public void PlayInvalidSelectionSfx() => PlayUiSfx(invalidSelectionSfx);
+        public void PlayGeneralTouchSfx()
+        {
+            if (generalTouchSfx == null)
+            {
+                return;
+            }
+
+            _lastGeneralTouchSfxTime = Time.unscaledTime;
+            PlayUiSfx(generalTouchSfx);
+        }
+
+        public void PlayDragTouchSfx() => PlayUiSfx(dragTouchSfx);
+        public void PlayReleaseTouchSfx() => PlayUiSfx(releaseTouchSfx);
+        public void PlayStageVictorySfx() => PlayUiSfx(stageVictorySfx);
+        public void PlayDefeatSfx() => PlayUiSfx(defeatSfx);
+        public void PlayCombatModeSwitchSfx() => PlayUiSfx(combatModeSwitchSfx);
 
         public float MusicVolume
         {

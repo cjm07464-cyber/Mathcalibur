@@ -180,6 +180,10 @@ namespace Mathcalibur.Battle
         private readonly Dictionary<string, UniqueItemPresentationText> _uniqueItemPresentationTexts = new(StringComparer.Ordinal);
         private readonly Dictionary<Image, Vector3> _slotIconBaseScales = new();
         private int _lastAutoLineClearDamage;
+        private int _leftEdgeNumberLineClearStreak;
+        private int _rightEdgeNumberLineClearStreak;
+        private bool _forceOperatorOnNextLeftEdgeRefill;
+        private bool _forceOperatorOnNextRightEdgeRefill;
         private bool _usingRuntimeStartingUniqueFallback;
         private int _highestDamageThisRun;
         private RuntimeStageSnapshot _stageStartSnapshot;
@@ -222,6 +226,9 @@ namespace Mathcalibur.Battle
         private const int MaxStage = 10;
         private const float StageClearGoldRewardMultiplier = 1.5f;
         private const float EdgeColumnOperatorChanceMultiplier = 0.5f;
+        private const int OperatorLineClearFixedDamage = 10;
+        private const int EdgeNumberLineClearForceThreshold = 3;
+        private const int MaxForcedEdgeOperatorsPerRefill = 2;
         private const string Unique1ItemId = "UNIQUE_1_AWAKENED_ONE";
         private const string Unique2ItemId = "UNIQUE_2_PROBABILITY_STRIKE";
         private const string Unique3ItemId = "UNIQUE_3_TRINITY";
@@ -963,6 +970,7 @@ namespace Mathcalibur.Battle
             }
 
             _defeatOverlayOpen = true;
+            GameAudioManager.Instance?.PlayDefeatSfx();
             SetGameplayInteractionEnabled(false);
             CloseMobileExitOverlay();
             CloseBagPanel();
@@ -1978,6 +1986,7 @@ namespace Mathcalibur.Battle
             _validTurnCount = 0;
             _unique1UsedOneCountThisStage = 0;
             _unique1TransformReady = false;
+            ResetEdgeNumberLineClearCorrection();
             RebuildCachedSpawnWeights();
             BuildBoard();
             ResolveAutoLineClears(false);
@@ -2028,9 +2037,8 @@ namespace Mathcalibur.Battle
             _unique1UsedOneCountThisStage = 0;
             _unique1TransformReady = false;
             _playerShield = 0;
-            _currentCombatMode = CombatMode.Attack;
+            ResetCombatModeToAttack(true);
             _enemyDeathHandledThisStage = false;
-            battleAnimationManager?.SetPlayerCombatMode(_currentCombatMode);
             RebuildCachedSpawnWeights();
             RefreshHud(string.Empty, "-");
             _hud.SetMessage($"Stage {_playerState.CurrentStage}: {_currentStage.EnemyName}");
@@ -2228,8 +2236,15 @@ namespace Mathcalibur.Battle
             }
         }
 
-        private void SpawnTileValue(BattleTileView tile, int x, int y)
+        private void SpawnTileValue(BattleTileView tile, int x, int y, bool forceOperator = false)
         {
+            if (forceOperator)
+            {
+                tile.SetOperator(PickOperator());
+                ApplyTileSpriteVisual(tile);
+                return;
+            }
+
             var numberChance = GetNumberChanceForCell(x, y);
             if (UnityEngine.Random.value < numberChance)
             {
@@ -2362,9 +2377,13 @@ namespace Mathcalibur.Battle
                 return;
             }
 
+            var isFirstSelectedTile = _selection.Count == 0;
             _selection.Add(tile);
             tile.SetSelected(true);
-            GameAudioManager.Instance?.PlayTileSelectSfx();
+            if (!isFirstSelectedTile)
+            {
+                GameAudioManager.Instance?.PlayDragTouchSfx();
+            }
             RefreshHud(GetExpressionString(), "-");
         }
 
@@ -2405,6 +2424,8 @@ namespace Mathcalibur.Battle
                 RefreshHud(string.Empty, "-");
                 return;
             }
+
+            GameAudioManager.Instance?.PlayReleaseTouchSfx();
 
             var uniqueOutcome = ResolveUniqueOutcome(context, baseResult);
 
@@ -2851,15 +2872,8 @@ namespace Mathcalibur.Battle
         {
             if (!HasUniqueItem(Unique4ItemId) || !_itemDatabase.TryGetItem(Unique4ItemId, out var unique4))
             {
-                var isDefaultACell = (x + y) % 2 == 0;
-                var defaultNumberRatio = isDefaultACell
-                    ? config.DefaultNumberSpawnRatio
-                    : config.DefaultOperatorSpawnRatio;
-                var defaultOperatorRatio = isDefaultACell
-                    ? config.DefaultOperatorSpawnRatio
-                    : config.DefaultNumberSpawnRatio;
-                var totalDefaultRatio = Mathf.Max(1, defaultNumberRatio + defaultOperatorRatio);
-                return Mathf.Clamp01(defaultNumberRatio / (float)totalDefaultRatio);
+                var totalDefaultRatio = Mathf.Max(1, config.DefaultNumberSpawnRatio + config.DefaultOperatorSpawnRatio);
+                return Mathf.Clamp01(config.DefaultNumberSpawnRatio / (float)totalDefaultRatio);
             }
 
             var isACell = (x + y) % 2 == 0;
@@ -2904,16 +2918,31 @@ namespace Mathcalibur.Battle
 
         private void SetCombatMode(CombatMode mode)
         {
-            if (_isResolvingTurn)
+            SetCombatMode(mode, true);
+        }
+
+        private void SetCombatMode(CombatMode mode, bool playSfx, bool force = false)
+        {
+            if (_isResolvingTurn && !force)
             {
                 return;
             }
 
+            var changed = _currentCombatMode != mode;
             _currentCombatMode = mode;
             battleAnimationManager?.SetPlayerCombatMode(mode);
             RefreshCombatModeButtons();
             RefreshHud(GetExpressionString(), "-");
             _hud.SetMessage(mode == CombatMode.Attack ? "Attack Mode" : "Defense Mode");
+            if (changed && playSfx)
+            {
+                GameAudioManager.Instance?.PlayCombatModeSwitchSfx();
+            }
+        }
+
+        private void ResetCombatModeToAttack(bool silent)
+        {
+            SetCombatMode(CombatMode.Attack, !silent, true);
         }
 
         private void EnsureStartingUniqueSelection()
@@ -3514,7 +3543,7 @@ namespace Mathcalibur.Battle
 
                 if (group.Kind == TileKind.Operator)
                 {
-                    damage += config.OperatorLineClearFixedDamage;
+                    damage += OperatorLineClearFixedDamage;
                     continue;
                 }
 
@@ -3541,6 +3570,84 @@ namespace Mathcalibur.Battle
 
             _lastAutoLineClearDamage += damage;
             _enemyHp = Mathf.Max(0, _enemyHp - damage);
+            TrackEdgeNumberLineClearStreaks(lineGroups);
+        }
+
+        private void TrackEdgeNumberLineClearStreaks(IEnumerable<LineClearGroup> lineGroups)
+        {
+            foreach (var group in lineGroups)
+            {
+                if (group == null || group.Direction != LineClearDirection.Vertical || group.Tiles.Count == 0)
+                {
+                    continue;
+                }
+
+                var columnIndex = group.Tiles[0].X;
+                if (!IsEdgeColumn(columnIndex))
+                {
+                    continue;
+                }
+
+                if (group.Kind == TileKind.Number)
+                {
+                    IncrementEdgeNumberLineClearStreak(columnIndex);
+                }
+                else if (group.Kind == TileKind.Operator)
+                {
+                    ResetEdgeNumberLineClearCorrection(columnIndex);
+                }
+            }
+        }
+
+        private void IncrementEdgeNumberLineClearStreak(int columnIndex)
+        {
+            if (IsLeftEdgeColumn(columnIndex))
+            {
+                _leftEdgeNumberLineClearStreak++;
+                if (_leftEdgeNumberLineClearStreak >= EdgeNumberLineClearForceThreshold)
+                {
+                    _forceOperatorOnNextLeftEdgeRefill = true;
+                }
+
+                return;
+            }
+
+            _rightEdgeNumberLineClearStreak++;
+            if (_rightEdgeNumberLineClearStreak >= EdgeNumberLineClearForceThreshold)
+            {
+                _forceOperatorOnNextRightEdgeRefill = true;
+            }
+        }
+
+        private void ResetEdgeNumberLineClearCorrection()
+        {
+            _leftEdgeNumberLineClearStreak = 0;
+            _rightEdgeNumberLineClearStreak = 0;
+            _forceOperatorOnNextLeftEdgeRefill = false;
+            _forceOperatorOnNextRightEdgeRefill = false;
+        }
+
+        private void ResetEdgeNumberLineClearCorrection(int columnIndex)
+        {
+            if (IsLeftEdgeColumn(columnIndex))
+            {
+                _leftEdgeNumberLineClearStreak = 0;
+                _forceOperatorOnNextLeftEdgeRefill = false;
+                return;
+            }
+
+            _rightEdgeNumberLineClearStreak = 0;
+            _forceOperatorOnNextRightEdgeRefill = false;
+        }
+
+        private bool IsEdgeColumn(int columnIndex)
+        {
+            return columnIndex == 0 || columnIndex == config.Columns - 1;
+        }
+
+        private bool IsLeftEdgeColumn(int columnIndex)
+        {
+            return columnIndex == 0;
         }
 
         private string BuildBoardResolutionMessage(string resultMessage)
@@ -3624,10 +3731,11 @@ namespace Mathcalibur.Battle
                 }
 
                 var spawnIndex = 0;
+                var forcedOperatorRows = GetForcedOperatorRowsForRefill(x, writeY + 1);
                 for (var y = writeY; y >= 0; y--)
                 {
                     var tile = CreateTile(x, y, layoutMetrics);
-                    SpawnTileValue(tile, x, y);
+                    SpawnTileValue(tile, x, y, forcedOperatorRows.Contains(y));
                     var targetPosition = GetTileAnchoredPosition(x, y, layoutMetrics);
                     if (animate)
                     {
@@ -3642,6 +3750,44 @@ namespace Mathcalibur.Battle
                     spawnIndex++;
                 }
             }
+        }
+
+        private HashSet<int> GetForcedOperatorRowsForRefill(int columnIndex, int refillCount)
+        {
+            var forcedRows = new HashSet<int>();
+            if (refillCount <= 0 || !IsEdgeColumn(columnIndex))
+            {
+                return forcedRows;
+            }
+
+            var shouldForce = IsLeftEdgeColumn(columnIndex)
+                ? _forceOperatorOnNextLeftEdgeRefill
+                : _forceOperatorOnNextRightEdgeRefill;
+            if (!shouldForce)
+            {
+                return forcedRows;
+            }
+
+            var forceCount = UnityEngine.Random.Range(1, Mathf.Min(MaxForcedEdgeOperatorsPerRefill, refillCount) + 1);
+            var candidates = new List<int>(refillCount);
+            for (var y = 0; y < refillCount; y++)
+            {
+                candidates.Add(y);
+            }
+
+            for (var i = 0; i < forceCount && candidates.Count > 0; i++)
+            {
+                var candidateIndex = UnityEngine.Random.Range(0, candidates.Count);
+                forcedRows.Add(candidates[candidateIndex]);
+                candidates.RemoveAt(candidateIndex);
+            }
+
+            if (forcedRows.Count > 0)
+            {
+                ResetEdgeNumberLineClearCorrection(columnIndex);
+            }
+
+            return forcedRows;
         }
 
         private void RefreshBoardVisualLayout()
@@ -3837,6 +3983,7 @@ namespace Mathcalibur.Battle
                 yield return battleAnimationManager.PlayEnemyDeathRoutine();
             }
 
+            GameAudioManager.Instance?.PlayStageVictorySfx();
             _isResolvingTurn = false;
             OnStageCleared();
         }

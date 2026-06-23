@@ -1,4 +1,5 @@
 using System.Collections;
+using Mathcalibur.Audio;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -37,18 +38,22 @@ namespace Mathcalibur.UI
 
         private void Update()
         {
-            if (Input.GetMouseButtonDown(0))
-            {
-                Spawn(Input.mousePosition);
-            }
-
             if (Input.touchCount > 0)
             {
                 var touch = Input.GetTouch(0);
                 if (touch.phase == TouchPhase.Began)
                 {
+                    GameAudioManager.Instance?.PlayGeneralTouchSfx();
                     Spawn(touch.position);
                 }
+
+                return;
+            }
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                GameAudioManager.Instance?.PlayGeneralTouchSfx();
+                Spawn(Input.mousePosition);
             }
         }
 
