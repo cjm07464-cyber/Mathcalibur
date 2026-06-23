@@ -114,7 +114,7 @@
     },
     {
       "key": "TEMP_UNIQUE_1_REQUIRED_ONE_COUNT",
-      "value": 10
+      "value": 3
     },
     {
       "key": "TEMP_UNIQUE_2_BASE_CHANCE_PERCENT",
@@ -122,7 +122,7 @@
     },
     {
       "key": "TEMP_UNIQUE_2_CHANCE_PER_TWO_PERCENT",
-      "value": 10
+      "value": 30
     },
     {
       "key": "TEMP_UNIQUE_2_MAX_CHANCE_PERCENT",
@@ -177,12 +177,8 @@
       "value": 140
     },
     {
-      "key": "TEMP_UNIQUE_9_TRIGGER_TURN_1",
-      "value": 9
-    },
-    {
-      "key": "TEMP_UNIQUE_9_TRIGGER_TURN_2",
-      "value": 18
+      "key": "TEMP_UNIQUE_9_TRIGGER_TURN_INTERVAL",
+      "value": 3
     },
     {
       "key": "TEMP_UNIQUE_9_MAX_TRANSFORM_VALUE",
@@ -663,7 +659,7 @@
     },
     {
       "itemId": "UNIQUE_1_AWAKENED_ONE",
-      "displayName": "각성하는 하나",
+      "displayName": "모나드",
       "itemCategory": "UniqueItem",
       "rarity": "Legendary",
       "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
@@ -671,12 +667,12 @@
       "effectType": "AccumulateOneThenTransformNextExpression",
       "effectPayload": "requiredOneCount: TEMP_UNIQUE_1_REQUIRED_ONE_COUNT",
       "unlockStage": 0,
-      "uiDescriptionKo": "1을 10개 사용하면, 다음 유효 수식 1회 동안 1이 11로 계산됩니다.",
+      "uiDescriptionKo": "1을 3개 사용하면, 다음 유효 수식 1회 동안 1이 11로 계산됩니다.",
       "implementationNote": "PreCalculationTransform. Starting Unique candidate and Unique Shop eligible."
     },
     {
       "itemId": "UNIQUE_2_PROBABILITY_STRIKE",
-      "displayName": "두 번째 일격",
+      "displayName": "츠바이하우",
       "itemCategory": "UniqueItem",
       "rarity": "Legendary",
       "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
@@ -684,12 +680,12 @@
       "effectType": "ProbabilityBonusDamage",
       "effectPayload": "baseChancePercent: TEMP_UNIQUE_2_BASE_CHANCE_PERCENT; chancePerTwoPercent: TEMP_UNIQUE_2_CHANCE_PER_TWO_PERCENT; maxChancePercent: TEMP_UNIQUE_2_MAX_CHANCE_PERCENT; bonusDamagePercent: TEMP_UNIQUE_2_BONUS_DAMAGE_PERCENT",
       "unlockStage": 0,
-      "uiDescriptionKo": "공격 시 확률적으로 추가 데미지를 줍니다. 수식 안의 2가 많을수록 확률이 올라갑니다.",
+      "uiDescriptionKo": "공격 시 확률적으로 추가 데미지를 줍니다. 수식 안의 2가 많을수록 30% 확률이 올라갑니다.",
       "implementationNote": "PostCalculationBonus. Positive Attack Mode only."
     },
     {
       "itemId": "UNIQUE_3_TRINITY",
-      "displayName": "성부, 성자, 성령",
+      "displayName": "삼위일체",
       "itemCategory": "UniqueItem",
       "rarity": "Legendary",
       "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
@@ -697,12 +693,12 @@
       "effectType": "TrinityThreeSixNine",
       "effectPayload": "attackBonusDamage: TEMP_UNIQUE_3_ATTACK_BONUS_DAMAGE; attackShieldBonus: TEMP_UNIQUE_3_ATTACK_SHIELD_BONUS; defenseShieldBonus: TEMP_UNIQUE_3_DEFENSE_SHIELD_BONUS",
       "unlockStage": 0,
-      "uiDescriptionKo": "한 수식에 3, 6, 9가 모두 있으면 추가 효과가 발동합니다.",
+      "uiDescriptionKo": "한 수식에 3, 6, 9가 하나라도 있으면 추가 효과가 발동합니다. 중첩 가능",
       "implementationNote": "PostCalculationBonus in Attack and Defense Mode."
     },
     {
       "itemId": "UNIQUE_4_ORDER_OF_OPERATIONS",
-      "displayName": "사칙연산의 질서",
+      "displayName": "테트라",
       "itemCategory": "UniqueItem",
       "rarity": "Legendary",
       "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
@@ -715,7 +711,7 @@
     },
     {
       "itemId": "UNIQUE_5_SHIELD_NUMBER",
-      "displayName": "다섯 번째 방패",
+      "displayName": "펜타그램",
       "itemCategory": "UniqueItem",
       "rarity": "Legendary",
       "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
@@ -728,7 +724,7 @@
     },
     {
       "itemId": "UNIQUE_6_FLAT_WEALTH",
-      "displayName": "여섯 번째 재화",
+      "displayName": "VI",
       "itemCategory": "UniqueItem",
       "rarity": "Legendary",
       "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
@@ -754,7 +750,7 @@
     },
     {
       "itemId": "UNIQUE_8_PERCENT_WEALTH",
-      "displayName": "여덟 번째 부",
+      "displayName": "우로보로스",
       "itemCategory": "UniqueItem",
       "rarity": "Legendary",
       "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
@@ -767,15 +763,15 @@
     },
     {
       "itemId": "UNIQUE_9_ODINS_NINE_TRIALS",
-      "displayName": "오딘의 9가지 시험",
+      "displayName": "위그드라실",
       "itemCategory": "UniqueItem",
       "rarity": "Legendary",
       "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
       "maxAcquisitionsPerRun": 1,
       "effectType": "OdinBoardWideNineTransform",
-      "effectPayload": "triggerTurnA: TEMP_UNIQUE_9_TRIGGER_TURN_1; triggerTurnB: TEMP_UNIQUE_9_TRIGGER_TURN_2; maxTransformValue: TEMP_UNIQUE_9_MAX_TRANSFORM_VALUE; targetValue: TEMP_UNIQUE_9_TARGET_VALUE",
+      "effectPayload": "triggerTurnInterval: TEMP_UNIQUE_9_TRIGGER_TURN_INTERVAL; maxTransformValue: TEMP_UNIQUE_9_MAX_TRANSFORM_VALUE; targetValue: TEMP_UNIQUE_9_TARGET_VALUE",
       "unlockStage": 0,
-      "uiDescriptionKo": "9번째와 18번째 유효 턴에 보드의 낮은 숫자들이 9로 변합니다.",
+      "uiDescriptionKo": "3의 배수의 턴마다 보드의 낮은 숫자들이 9로 변합니다.",
       "implementationNote": "BoardStateTransformBeforeCalculation. Unique 9 has priority over Unique 1."
     }
   ]

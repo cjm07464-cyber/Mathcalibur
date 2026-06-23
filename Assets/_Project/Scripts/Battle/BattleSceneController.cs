@@ -156,6 +156,7 @@ namespace Mathcalibur.Battle
         private bool _startingUniqueConfirmTransitioning;
         private bool _activeItemConfirmOpen;
         private bool _defeatOverlayOpen;
+        private bool _defeatTransitioning;
         private bool _mobileExitOverlayOpen;
         private int? _pendingStartingUniqueSelectionIndex;
         private string _pendingActiveItemId;
@@ -944,9 +945,9 @@ namespace Mathcalibur.Battle
             _defeatMaxDamageText.color = config.ShopPanelTextColor;
             _defeatMaxDamageText.text = BuildDefeatMaxDamageText();
 
-            var retryButton = CreateActionButton(_defeatPanel, "현재 스테이지 재도전", new Vector2(0.5f, 0.24f), RetryCurrentStage, false, config.ShopConfirmActionButtonWidth * 1.6f, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
+            var retryButton = CreateActionButton(_defeatPanel, "현재 스테이지 재도전", new Vector2(0.5f, 0.24f), RetryCurrentStageWithFade, false, config.ShopConfirmActionButtonWidth * 1.6f, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
             SetButtonTextColor(retryButton, config.ShopButtonTextColor);
-            var restartButton = CreateActionButton(_defeatPanel, "처음부터 다시 하기", new Vector2(0.5f, 0.13f), RestartFromBeginning, false, config.ShopConfirmActionButtonWidth * 1.6f, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
+            var restartButton = CreateActionButton(_defeatPanel, "처음부터 다시 하기", new Vector2(0.5f, 0.13f), RestartFromBeginningWithFade, false, config.ShopConfirmActionButtonWidth * 1.6f, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
             SetButtonTextColor(restartButton, config.ShopButtonTextColor);
             var menuButton = CreateActionButton(_defeatPanel, "타이틀로 돌아가기", new Vector2(0.5f, 0.02f), OnMenuButtonPressed, false, config.ShopConfirmActionButtonWidth * 1.6f, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
             SetButtonTextColor(menuButton, config.ShopButtonTextColor);
@@ -956,6 +957,11 @@ namespace Mathcalibur.Battle
 
         private void OpenDefeatOverlay()
         {
+            if (_defeatOverlayOpen || _defeatTransitioning)
+            {
+                return;
+            }
+
             _defeatOverlayOpen = true;
             SetGameplayInteractionEnabled(false);
             CloseMobileExitOverlay();
@@ -968,6 +974,20 @@ namespace Mathcalibur.Battle
                 _defeatMaxDamageText.text = BuildDefeatMaxDamageText();
             }
 
+            StartCoroutine(OpenDefeatOverlayWithFadeRoutine());
+        }
+
+        private IEnumerator OpenDefeatOverlayWithFadeRoutine()
+        {
+            _defeatTransitioning = true;
+            yield return SceneTransitionFader.Instance.FadeOut(fadeOutDuration);
+            ShowDefeatOverlayVisuals();
+            yield return SceneTransitionFader.Instance.FadeIn(fadeInDuration);
+            _defeatTransitioning = false;
+        }
+
+        private void ShowDefeatOverlayVisuals()
+        {
             if (_defeatBlackBackgroundRoot != null)
             {
                 EnsureHierarchyActive(_defeatBlackBackgroundRoot);
@@ -988,7 +1008,6 @@ namespace Mathcalibur.Battle
                 _defeatPanel.gameObject.SetActive(true);
                 _defeatPanel.SetAsLastSibling();
             }
-
         }
 
         private bool TryBuildDefeatSceneLayout()
@@ -1008,8 +1027,8 @@ namespace Mathcalibur.Battle
                 _defeatMaxDamageText.text = BuildDefeatMaxDamageText();
             }
 
-            BindButton(layout.RetryCurrentStageButton, RetryCurrentStage);
-            BindButton(layout.RestartFromBeginningButton, RestartFromBeginning);
+            BindButton(layout.RetryCurrentStageButton, RetryCurrentStageWithFade);
+            BindButton(layout.RestartFromBeginningButton, RestartFromBeginningWithFade);
             BindButton(layout.ReturnToTitleButton, OnMenuButtonPressed);
             BindButton(layout.DebugOpenButton, OpenDefeatOverlayForDebug);
 
@@ -1271,9 +1290,49 @@ namespace Mathcalibur.Battle
             InitBattle();
         }
 
+        private void RetryCurrentStageWithFade()
+        {
+            BeginDefeatLocalTransition(RetryCurrentStage);
+        }
+
+        private void RestartFromBeginningWithFade()
+        {
+            BeginDefeatLocalTransition(RestartFromBeginning);
+        }
+
+        private void BeginDefeatLocalTransition(Action transitionAction)
+        {
+            if (_defeatTransitioning || transitionAction == null)
+            {
+                return;
+            }
+
+            StartCoroutine(DefeatLocalTransitionRoutine(transitionAction));
+        }
+
+        private IEnumerator DefeatLocalTransitionRoutine(Action transitionAction)
+        {
+            _defeatTransitioning = true;
+            yield return SceneTransitionFader.Instance.FadeOut(fadeOutDuration);
+            transitionAction();
+            yield return SceneTransitionFader.Instance.FadeIn(fadeInDuration);
+            _defeatTransitioning = false;
+        }
+
         private void OnMenuButtonPressed()
         {
-            ReturnToTitleScene();
+            if (_defeatTransitioning)
+            {
+                return;
+            }
+
+            _defeatTransitioning = true;
+            SceneTransitionFader.BeginFadeOutLoadSceneFadeIn(
+                "TitleScene",
+                fadeOutDuration,
+                fadeInDuration,
+                true,
+                musicFadeOutDuration);
         }
 
         private void OpenDefeatOverlayForDebug()
@@ -1916,12 +1975,12 @@ namespace Mathcalibur.Battle
             _dragging = false;
             ClearSelectionVisual();
             ClearBoardTiles();
-            RebuildCachedSpawnWeights();
-            BuildBoard();
-            ResolveAutoLineClears(false);
             _validTurnCount = 0;
             _unique1UsedOneCountThisStage = 0;
             _unique1TransformReady = false;
+            RebuildCachedSpawnWeights();
+            BuildBoard();
+            ResolveAutoLineClears(false);
             _playerShield = 0;
             RefreshHud(string.Empty, "-");
             _hud.SetMessage(string.Empty);
@@ -2095,6 +2154,18 @@ namespace Mathcalibur.Battle
             {
                 case TileKind.Number:
                     {
+                        if (TryGetUnique1ReadyTileSprites(tile.NumberValue, out var unique1ReadySpriteEntry))
+                        {
+                            tile.ConfigureSprites(unique1ReadySpriteEntry.NormalSprite, unique1ReadySpriteEntry.SelectedSprite, config.ShowTileLabelWhenSpriteAssigned);
+                            break;
+                        }
+
+                        if (TryGetUniqueNumberTileSprites(tile.NumberValue, out var uniqueSpriteEntry))
+                        {
+                            tile.ConfigureSprites(uniqueSpriteEntry.NormalSprite, uniqueSpriteEntry.SelectedSprite, config.ShowTileLabelWhenSpriteAssigned);
+                            break;
+                        }
+
                         var spriteEntry = config.NumberTileSprites.FirstOrDefault(entry => entry.Value == tile.NumberValue);
                         tile.ConfigureSprites(spriteEntry.NormalSprite, spriteEntry.SelectedSprite, config.ShowTileLabelWhenSpriteAssigned);
                         break;
@@ -2105,6 +2176,55 @@ namespace Mathcalibur.Battle
                         tile.ConfigureSprites(spriteEntry.NormalSprite, spriteEntry.SelectedSprite, config.ShowTileLabelWhenSpriteAssigned);
                         break;
                     }
+            }
+        }
+
+        private bool TryGetUnique1ReadyTileSprites(int numberValue, out BattleConfig.NumberTileSpriteEntry spriteEntry)
+        {
+            spriteEntry = default;
+            if (numberValue != 1 || !_unique1TransformReady || !HasUniqueItem(Unique1ItemId))
+            {
+                return false;
+            }
+
+            spriteEntry = config.NumberTileSprites.FirstOrDefault(entry => entry.Value == 11);
+            return spriteEntry.Value == 11 && (spriteEntry.NormalSprite != null || spriteEntry.SelectedSprite != null);
+        }
+
+        private bool TryGetUniqueNumberTileSprites(int numberValue, out BattleConfig.UniqueNumberTileSpriteEntry spriteEntry)
+        {
+            spriteEntry = default;
+            var requiredUniqueItemId = numberValue switch
+            {
+                1 => Unique1ItemId,
+                2 => Unique2ItemId,
+                3 or 6 or 9 => Unique3ItemId,
+                5 => Unique5ItemId,
+                _ => null,
+            };
+
+            if (requiredUniqueItemId == null || !HasUniqueItem(requiredUniqueItemId))
+            {
+                return false;
+            }
+
+            spriteEntry = config.UniqueNumberTileSprites.FirstOrDefault(entry => entry.Value == numberValue);
+            return spriteEntry.Value == numberValue && (spriteEntry.NormalSprite != null || spriteEntry.SelectedSprite != null);
+        }
+
+        private void RefreshBoardTileSpriteVisuals()
+        {
+            if (_grid == null)
+            {
+                return;
+            }
+
+            for (var x = 0; x < config.Columns; x++)
+            {
+                for (var y = 0; y < config.Rows; y++)
+                {
+                    ApplyTileSpriteVisual(_grid[x, y]);
+                }
             }
         }
 
@@ -2274,6 +2394,7 @@ namespace Mathcalibur.Battle
                     }
                 }
                 _unique1TransformReady = false;
+                RefreshBoardTileSpriteVisuals();
             }
 
             if (!TryCalculateExpression(context.CalculationNumbers, context.Operators, out var baseResult, out error))
@@ -2609,18 +2730,22 @@ namespace Mathcalibur.Battle
                 }
             }
 
-            if (HasUniqueItem(Unique3ItemId) && finalNumbers.Contains(3) && finalNumbers.Contains(6) && finalNumbers.Contains(9))
+            var unique3StackCount = 0;
+            unique3StackCount += finalNumbers.Contains(3) ? 1 : 0;
+            unique3StackCount += finalNumbers.Contains(6) ? 1 : 0;
+            unique3StackCount += finalNumbers.Contains(9) ? 1 : 0;
+            if (HasUniqueItem(Unique3ItemId) && unique3StackCount > 0)
             {
                 if (_itemDatabase.TryGetItem(Unique3ItemId, out var unique3))
                 {
                     if (isAttack)
                     {
-                        bonusDamage += _itemDatabase.ResolveEffectInt(unique3, "attackBonusDamage");
-                        shieldBonus += _itemDatabase.ResolveEffectInt(unique3, "attackShieldBonus");
+                        bonusDamage += unique3StackCount * _itemDatabase.ResolveEffectInt(unique3, "attackBonusDamage");
+                        shieldBonus += unique3StackCount * _itemDatabase.ResolveEffectInt(unique3, "attackShieldBonus");
                     }
                     else
                     {
-                        shieldBonus += _itemDatabase.ResolveEffectInt(unique3, "defenseShieldBonus");
+                        shieldBonus += unique3StackCount * _itemDatabase.ResolveEffectInt(unique3, "defenseShieldBonus");
                     }
 
                     messageParts.Add("Unique 3 발동");
@@ -2676,6 +2801,7 @@ namespace Mathcalibur.Battle
             {
                 _unique1UsedOneCountThisStage = 0;
                 _unique1TransformReady = true;
+                RefreshBoardTileSpriteVisuals();
             }
         }
 
@@ -2686,9 +2812,8 @@ namespace Mathcalibur.Battle
                 return;
             }
 
-            var triggerTurnA = _itemDatabase.ResolveEffectInt(unique9, "triggerTurnA");
-            var triggerTurnB = _itemDatabase.ResolveEffectInt(unique9, "triggerTurnB");
-            if (_validTurnCount != triggerTurnA && _validTurnCount != triggerTurnB)
+            var triggerTurnInterval = _itemDatabase.ResolveEffectInt(unique9, "triggerTurnInterval");
+            if (triggerTurnInterval <= 0 || _validTurnCount % triggerTurnInterval != 0)
             {
                 return;
             }
@@ -2726,8 +2851,15 @@ namespace Mathcalibur.Battle
         {
             if (!HasUniqueItem(Unique4ItemId) || !_itemDatabase.TryGetItem(Unique4ItemId, out var unique4))
             {
-                var totalDefaultRatio = Mathf.Max(1, config.DefaultNumberSpawnRatio + config.DefaultOperatorSpawnRatio);
-                return Mathf.Clamp01(config.DefaultNumberSpawnRatio / (float)totalDefaultRatio);
+                var isDefaultACell = (x + y) % 2 == 0;
+                var defaultNumberRatio = isDefaultACell
+                    ? config.DefaultNumberSpawnRatio
+                    : config.DefaultOperatorSpawnRatio;
+                var defaultOperatorRatio = isDefaultACell
+                    ? config.DefaultOperatorSpawnRatio
+                    : config.DefaultNumberSpawnRatio;
+                var totalDefaultRatio = Mathf.Max(1, defaultNumberRatio + defaultOperatorRatio);
+                return Mathf.Clamp01(defaultNumberRatio / (float)totalDefaultRatio);
             }
 
             var isACell = (x + y) % 2 == 0;
@@ -3146,6 +3278,7 @@ namespace Mathcalibur.Battle
             _runtimeItemInventory.RestoreSnapshot(_stageStartSnapshot.InventorySnapshot);
             _startingUniqueSelectionResolved = true;
             RebuildCachedSpawnWeights();
+            RefreshBoardTileSpriteVisuals();
         }
 
         private static void SetCanvasGroupInteraction(Component target, bool enabled)
@@ -4731,6 +4864,7 @@ namespace Mathcalibur.Battle
             }
 
             _itemEffectResolver.ApplyAcquiredItem(slot.Item, _runtimeItemInventory, _itemDatabase, this);
+            RefreshBoardTileSpriteVisuals();
             _shopSelectionMade = true;
 
             if (selection.IsFree)
