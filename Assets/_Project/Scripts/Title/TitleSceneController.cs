@@ -47,6 +47,10 @@ namespace Mathcalibur.Title
         [SerializeField] private Sprite easyStartButtonSprite;
         [SerializeField] private Sprite nonEasyStartButtonSprite;
 
+        [Header("Settings")]
+        [SerializeField] private GameObject settingsPanelRoot;
+        [SerializeField] private Button settingsCloseButton;
+
         private GameDifficulty? _pendingDifficulty;
         private Button _generatedStartBattleButton;
         private bool _isTransitioning;
@@ -62,6 +66,7 @@ namespace Mathcalibur.Title
             BindButton(easyButton, () => SelectDifficulty(GameDifficulty.Easy));
             BindButton(normalButton, () => SelectDifficulty(GameDifficulty.Normal));
             BindButton(hardButton, () => SelectDifficulty(GameDifficulty.Hard));
+            BindButton(settingsCloseButton, CloseSettingsPanel);
 
             EnsureStartMenuBlackBackground();
             CacheLevelMenuResponsiveLayout();
@@ -72,6 +77,7 @@ namespace Mathcalibur.Title
             }
 
             SetLevelPanelVisible(false);
+            CloseSettingsPanel();
         }
 
         private void Start()
@@ -91,6 +97,14 @@ namespace Mathcalibur.Title
             ApplyLevelMenuResponsiveLayout();
         }
 
+        private void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.Backspace) || Input.GetKeyDown(KeyCode.Escape))
+            {
+                HandleBackNavigation();
+            }
+        }
+
         public void OpenLevelPanel()
         {
             ClearPendingDifficultySelection();
@@ -103,6 +117,60 @@ namespace Mathcalibur.Title
         {
             ClearPendingDifficultySelection();
             SetLevelPanelVisible(false);
+        }
+
+        public void OpenSettingsPanel()
+        {
+            if (settingsPanelRoot == null)
+            {
+                return;
+            }
+
+            settingsPanelRoot.SetActive(true);
+        }
+
+        public void CloseSettingsPanel()
+        {
+            if (settingsPanelRoot != null)
+            {
+                settingsPanelRoot.SetActive(false);
+            }
+        }
+
+        public void ToggleSettingsPanel()
+        {
+            if (settingsPanelRoot != null && settingsPanelRoot.activeInHierarchy)
+            {
+                CloseSettingsPanel();
+                return;
+            }
+
+            OpenSettingsPanel();
+        }
+
+        private void HandleBackNavigation()
+        {
+            if (_isTransitioning)
+            {
+                return;
+            }
+
+            if (settingsPanelRoot != null && settingsPanelRoot.activeInHierarchy)
+            {
+                CloseSettingsPanel();
+                return;
+            }
+
+            if (_pendingDifficulty.HasValue)
+            {
+                ClearPendingDifficultySelection();
+                return;
+            }
+
+            if (levelPanelRoot != null && levelPanelRoot.activeInHierarchy)
+            {
+                CloseLevelPanel();
+            }
         }
 
         public void SelectDifficulty(GameDifficulty difficulty)

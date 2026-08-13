@@ -192,7 +192,7 @@ namespace Mathcalibur.Battle
             [Tooltip("보드에 생성될 숫자 값입니다.")]
             [InspectorName("숫자")]
             public int Value;
-            [Tooltip("숫자가 등장할 상대적 비율입니다. 높을수록 더 자주 나옵니다.")]
+            [Tooltip("숫자가 등장할 상대적 가중치입니다. 생성 비중은 전체 숫자 가중치 대비 이 값으로 계산됩니다.")]
             [InspectorName("가중치")]
             public int Weight;
         }
@@ -203,7 +203,7 @@ namespace Mathcalibur.Battle
             [Tooltip("보드에 생성될 연산자 종류입니다.")]
             [InspectorName("연산자")]
             public OperatorType Value;
-            [Tooltip("연산자가 등장할 상대적 비율입니다. 높을수록 더 자주 나옵니다.")]
+            [Tooltip("연산자가 등장할 상대적 가중치입니다. 생성 비중은 전체 연산자 가중치 대비 이 값으로 계산됩니다.")]
             [InspectorName("가중치")]
             public int Weight;
         }
@@ -225,14 +225,14 @@ namespace Mathcalibur.Battle
         [Serializable]
         public struct UniqueNumberTileSpriteEntry
         {
-            [Tooltip("고유형 아이템 보유 시 외형을 교체할 숫자입니다. 3번 고유형은 3, 6, 9를 각각 등록합니다.")]
+            [Tooltip("유니크 아이템 보유 시 외형을 교체할 숫자입니다. 3번 유니크는 3, 6, 9를 각각 등록합니다.")]
             [InspectorName("숫자")]
             public int Value;
-            [Tooltip("해당 고유형 아이템을 보유 중일 때 평상시 표시할 스프라이트입니다.")]
-            [InspectorName("고유형 기본 이미지")]
+            [Tooltip("해당 유니크 아이템을 보유 중일 때 평상시 표시할 스프라이트입니다.")]
+            [InspectorName("유니크 기본 이미지")]
             public Sprite NormalSprite;
-            [Tooltip("해당 고유형 아이템을 보유 중인 숫자 타일을 선택했을 때 표시할 스프라이트입니다. 비워두면 고유형 기본 이미지를 사용합니다.")]
-            [InspectorName("고유형 선택 이미지")]
+            [Tooltip("해당 유니크 아이템을 보유 중인 숫자 타일을 선택했을 때 표시할 스프라이트입니다. 비워두면 유니크 기본 이미지를 사용합니다.")]
+            [InspectorName("유니크 선택 이미지")]
             public Sprite SelectedSprite;
         }
 
@@ -277,9 +277,9 @@ namespace Mathcalibur.Battle
             new() { Value = 4 }, new() { Value = 5 }, new() { Value = 6 },
             new() { Value = 7 }, new() { Value = 8 }, new() { Value = 9 },
         };
-        [Header("고유형 숫자 타일 이미지")]
-        [Tooltip("고유형 아이템 보유 시 사용할 숫자 타일의 기본/선택 이미지를 연결합니다. 1=유니크1, 2=유니크2, 3·6·9=유니크3, 5=유니크5입니다.")]
-        [InspectorName("고유형 숫자 타일")]
+        [Header("유니크 숫자 타일 이미지")]
+        [Tooltip("유니크 아이템 보유 시 사용할 숫자 타일의 기본/선택 이미지를 연결합니다. 1=유니크1, 2=유니크2, 3·6·9=유니크3, 5=유니크5입니다.")]
+        [InspectorName("유니크 숫자 타일")]
         [SerializeField] private List<UniqueNumberTileSpriteEntry> uniqueNumberTileSprites = new()
         {
             new() { Value = 1 }, new() { Value = 2 }, new() { Value = 3 },

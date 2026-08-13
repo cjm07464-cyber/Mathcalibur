@@ -238,7 +238,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "number 1: TEMP_WEIGHT_MOD_SMALL_DOWN",
       "unlockStage": 1,
-      "uiDescriptionKo": "1의 등장 확률이 조금 낮아집니다.",
+      "uiDescriptionKo": "1 등장 가중치 -2.",
       "implementationNote": "Slightly raises the board's average number value by reducing 1."
     },
     {
@@ -251,7 +251,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "number 2: TEMP_WEIGHT_MOD_SMALL_DOWN",
       "unlockStage": 1,
-      "uiDescriptionKo": "2의 등장 확률이 조금 낮아집니다.",
+      "uiDescriptionKo": "2 등장 가중치 -2.",
       "implementationNote": "Reduces 2 slightly. May reduce some low-number stability."
     },
     {
@@ -264,7 +264,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "numbers 4,5,6: TEMP_WEIGHT_MOD_NORMAL_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "4, 5, 6의 등장 확률이 올라갑니다.",
+      "uiDescriptionKo": "4, 5, 6 등장 가중치 각각 +2.",
       "implementationNote": "Stable mid-number reinforcement."
     },
     {
@@ -277,7 +277,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "numbers 2,3,4: TEMP_WEIGHT_MOD_SMALL_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "2, 3, 4의 등장 확률이 조금 올라갑니다.",
+      "uiDescriptionKo": "2, 3, 4 등장 가중치 각각 +1.",
       "implementationNote": "Early board becomes more stable."
     },
     {
@@ -290,7 +290,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "operator +: TEMP_WEIGHT_MOD_SMALL_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "+의 등장 확률이 조금 올라갑니다.",
+      "uiDescriptionKo": "+ 등장 가중치 +1.",
       "implementationNote": "More stable expressions, but lower damage ceiling."
     },
     {
@@ -303,7 +303,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "operator -: TEMP_WEIGHT_MOD_SMALL_DOWN",
       "unlockStage": 1,
-      "uiDescriptionKo": "-의 등장 확률이 조금 낮아집니다.",
+      "uiDescriptionKo": "- 등장 가중치 -2.",
       "implementationNote": "Reduces negative-result risk."
     },
     {
@@ -316,8 +316,8 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "operators +,-: TEMP_WEIGHT_MOD_MANY_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "+와 -의 등장 비율이 더 증가합니다.",
-      "implementationNote": "The phrase 더 증가 is mapped to TEMP_WEIGHT_MOD_MANY_UP."
+      "uiDescriptionKo": "+, - 등장 가중치 각각 +4.",
+      "implementationNote": "Mapped to TEMP_WEIGHT_MOD_MANY_UP."
     },
     {
       "itemId": "ITEM_EVEN_REINFORCEMENT",
@@ -329,8 +329,8 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "numbers 2,4,6,8: TEMP_WEIGHT_MOD_TINY_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "짝수 숫자의 등장 확률이 아주 미세하게 올라갑니다.",
-      "implementationNote": "Original phrase 아주 조금 is normalized to 아주 미세하게."
+      "uiDescriptionKo": "2, 4, 6, 8 등장 가중치 각각 +1.",
+      "implementationNote": "Mapped to TEMP_WEIGHT_MOD_TINY_UP."
     },
     {
       "itemId": "ITEM_ODD_REINFORCEMENT",
@@ -342,8 +342,8 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "numbers 1,3,5,7: TEMP_WEIGHT_MOD_TINY_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "홀수 숫자의 등장 확률이 아주 미세하게 올라갑니다.",
-      "implementationNote": "Original phrase 아주 조금 is normalized to 아주 미세하게."
+      "uiDescriptionKo": "1, 3, 5, 7 등장 가중치 각각 +1.",
+      "implementationNote": "Mapped to TEMP_WEIGHT_MOD_TINY_UP."
     },
     {
       "itemId": "ITEM_STABLE_MULTIPLICATION",
@@ -355,7 +355,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "operator x: TEMP_WEIGHT_MOD_TINY_UP; numbers 2,3: TEMP_WEIGHT_MOD_TINY_UP",
       "unlockStage": 3,
-      "uiDescriptionKo": "x와 낮은 곱셈용 숫자의 등장 확률이 아주 미세하게 올라갑니다.",
+      "uiDescriptionKo": "x, 2, 3 등장 가중치 각각 +1.",
       "implementationNote": "Locked until Stage 3 because it modifies x."
     },
     {
@@ -368,7 +368,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "number 3: TEMP_WEIGHT_MOD_SMALL_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "3의 등장 확률이 조금 올라갑니다.",
+      "uiDescriptionKo": "3 등장 가중치 +1.",
       "implementationNote": "One of the three expanded n reinforcement items. Same implementation logic as 4 and 5."
     },
     {
@@ -381,7 +381,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "number 4: TEMP_WEIGHT_MOD_SMALL_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "4의 등장 확률이 조금 올라갑니다.",
+      "uiDescriptionKo": "4 등장 가중치 +1.",
       "implementationNote": "One of the three expanded n reinforcement items. Same implementation logic as 3 and 5."
     },
     {
@@ -394,7 +394,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "number 5: TEMP_WEIGHT_MOD_SMALL_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "5의 등장 확률이 조금 올라갑니다.",
+      "uiDescriptionKo": "5 등장 가중치 +1.",
       "implementationNote": "One of the three expanded n reinforcement items. Same implementation logic as 3 and 4."
     },
     {
@@ -407,7 +407,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "operator x: TEMP_WEIGHT_MOD_TINY_UP",
       "unlockStage": 3,
-      "uiDescriptionKo": "x의 등장 확률이 아주 미세하게 올라갑니다.",
+      "uiDescriptionKo": "x 등장 가중치 +1.",
       "implementationNote": "Locked until Stage 3 because it modifies x."
     },
     {
@@ -420,7 +420,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "number 1: TEMP_WEIGHT_MOD_SMALL_DOWN; operators -,÷: TEMP_WEIGHT_MOD_SMALL_DOWN",
       "unlockStage": 3,
-      "uiDescriptionKo": "1, -, ÷의 등장 확률이 조금 내려갑니다.",
+      "uiDescriptionKo": "1, -, ÷ 등장 가중치 각각 -2.",
       "implementationNote": "Locked until Stage 3 because it modifies ÷. If too strong, design may later move this to Rare."
     },
     {
@@ -433,7 +433,7 @@
       "effectType": "HealPlayer",
       "effectPayload": "healAmount: TEMP_SMALL_HEAL_AMOUNT",
       "unlockStage": 1,
-      "uiDescriptionKo": "전투 중 사용 시 현재 체력을 20 회복합니다. 현재 체력은 최대 체력을 초과할 수 없습니다.",
+      "uiDescriptionKo": "전투 중 사용 시 현재 체력 +20. 최대 체력은 초과할 수 없습니다.",
       "implementationNote": "Stored in inventory. Manual use. Consumed even if current HP is already full."
     },
     {
@@ -446,7 +446,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "number 7: TEMP_WEIGHT_MOD_NORMAL_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "7의 등장 확률이 올라갑니다.",
+      "uiDescriptionKo": "7 등장 가중치 +2.",
       "implementationNote": "Simple high-number reinforcement."
     },
     {
@@ -459,7 +459,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "operator x: TEMP_WEIGHT_MOD_NORMAL_UP; number 1: TEMP_WEIGHT_MOD_NORMAL_UP",
       "unlockStage": 3,
-      "uiDescriptionKo": "x의 등장 확률이 올라가지만, 1의 등장 확률도 올라갑니다.",
+      "uiDescriptionKo": "x 등장 가중치 +2. 1 등장 가중치도 +2.",
       "implementationNote": "High-risk high-return. Locked until Stage 3 because it modifies x."
     },
     {
@@ -472,7 +472,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "number 9: TEMP_WEIGHT_MOD_NORMAL_UP; operator ÷: TEMP_WEIGHT_MOD_NORMAL_UP",
       "unlockStage": 3,
-      "uiDescriptionKo": "9의 등장 확률이 올라가지만, ÷의 등장 확률도 올라갑니다.",
+      "uiDescriptionKo": "9 등장 가중치 +2. ÷ 등장 가중치도 +2.",
       "implementationNote": "High number and division risk increase together. Locked until Stage 3."
     },
     {
@@ -485,7 +485,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "numbers 7,8: TEMP_WEIGHT_MOD_NORMAL_UP; number 1: TEMP_WEIGHT_MOD_SMALL_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "7, 8의 등장 확률이 올라가지만, 1의 등장 확률도 조금 올라갑니다.",
+      "uiDescriptionKo": "7, 8 등장 가중치 각각 +2. 1 등장 가중치도 +1.",
       "implementationNote": "Mid-high number reinforcement with small low-number risk."
     },
     {
@@ -498,7 +498,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "numbers 8,9: TEMP_WEIGHT_MOD_NORMAL_UP; operator ÷: TEMP_WEIGHT_MOD_NORMAL_UP",
       "unlockStage": 3,
-      "uiDescriptionKo": "8, 9의 등장 확률이 올라가지만, ÷의 등장 확률도 올라갑니다.",
+      "uiDescriptionKo": "8, 9, ÷ 등장 가중치 각각 +2.",
       "implementationNote": "High damage potential and calculation instability. Locked until Stage 3."
     },
     {
@@ -511,7 +511,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "operator x: TEMP_WEIGHT_MOD_NORMAL_UP; operator -: TEMP_WEIGHT_MOD_SMALL_UP",
       "unlockStage": 3,
-      "uiDescriptionKo": "x의 등장 확률이 올라가지만, -의 등장 확률도 조금 올라갑니다.",
+      "uiDescriptionKo": "x 등장 가중치 +2. - 등장 가중치도 +1.",
       "implementationNote": "Multiplication boost with small negative-result risk. Locked until Stage 3."
     },
     {
@@ -524,7 +524,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "operators x,÷: TEMP_WEIGHT_MOD_NORMAL_UP; operator +: TEMP_WEIGHT_MOD_NORMAL_DOWN",
       "unlockStage": 3,
-      "uiDescriptionKo": "x와 ÷의 등장 확률이 올라가지만, +의 등장 확률이 낮아집니다.",
+      "uiDescriptionKo": "x, ÷ 등장 가중치 각각 +2. + 등장 가중치 -3.",
       "implementationNote": "Higher ceiling, lower stability. Locked until Stage 3."
     },
     {
@@ -537,7 +537,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "numbers 1,2,3: TEMP_WEIGHT_MOD_NORMAL_DOWN",
       "unlockStage": 1,
-      "uiDescriptionKo": "1, 2, 3의 등장 확률이 낮아집니다.",
+      "uiDescriptionKo": "1, 2, 3 등장 가중치 각각 -3.",
       "implementationNote": "Raises board average but can reduce early connection stability."
     },
     {
@@ -550,7 +550,7 @@
       "effectType": "IncreaseConnectionLimit",
       "effectPayload": "increaseValue: TEMP_CONNECTION_LIMIT_INCREASE_VALUE",
       "unlockStage": 1,
-      "uiDescriptionKo": "현재 Run의 최대 연결 가능 타일 수가 2 증가합니다.",
+      "uiDescriptionKo": "현재 Run의 최대 연결 가능 타일 수 +2. 최대 2회 획득.",
       "implementationNote": "Default flow is 5 to 7 to 9. Maximum 2 acquisitions per run."
     },
     {
@@ -563,7 +563,7 @@
       "effectType": "SetNextAttackMultiplier",
       "effectPayload": "multiplierPercent: TEMP_NEXT_ATTACK_BOOST_MULTIPLIER_PERCENT",
       "unlockStage": 1,
-      "uiDescriptionKo": "다음 Attack Mode 유효 수식 1회 데미지가 1.5배가 됩니다. 결과가 0 이하라도 pending 효과는 소모됩니다.",
+      "uiDescriptionKo": "다음 Attack Mode 유효 수식 1회 피해 1.5배(150%). 결과가 0 이하라도 효과는 소모됩니다.",
       "implementationNote": "Stored in inventory. Manual use. Disabled while another Attack Potion effect is pending. Does not apply to Defense Mode. Does not multiply enemy healing from negative results."
     },
     {
@@ -576,7 +576,7 @@
       "effectType": "IncreaseMaxHpAndCurrentHp",
       "effectPayload": "increaseValue: TEMP_MAX_HP_INCREASE",
       "unlockStage": 1,
-      "uiDescriptionKo": "최대 체력이 10 증가합니다. 획득 시 현재 체력도 10 증가합니다.",
+      "uiDescriptionKo": "최대 체력 +10. 획득 시 현재 체력도 +10. 최대 3회 획득.",
       "implementationNote": "Immediate survivability increase. Maximum 3 acquisitions per run."
     },
     {
@@ -589,7 +589,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "number 9: TEMP_WEIGHT_MOD_NORMAL_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "9의 등장 확률이 올라갑니다.",
+      "uiDescriptionKo": "9 등장 가중치 +2.",
       "implementationNote": "Legendary presentation, simple high-ceiling reinforcement. Value remains config-driven."
     },
     {
@@ -602,7 +602,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "numbers 7,8,9: TEMP_WEIGHT_MOD_NORMAL_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "7, 8, 9의 등장 확률이 모두 올라갑니다.",
+      "uiDescriptionKo": "7, 8, 9 등장 가중치 각각 +2.",
       "implementationNote": "High-number build reinforcement."
     },
     {
@@ -615,7 +615,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "operators -,÷: TEMP_WEIGHT_MOD_NORMAL_DOWN",
       "unlockStage": 3,
-      "uiDescriptionKo": "-와 ÷의 등장 확률이 낮아집니다.",
+      "uiDescriptionKo": "-, ÷ 등장 가중치 각각 -3.",
       "implementationNote": "Reduces risky operators. Locked until Stage 3 because it modifies ÷."
     },
     {
@@ -628,7 +628,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "operators +,x: TEMP_WEIGHT_MOD_NORMAL_UP",
       "unlockStage": 3,
-      "uiDescriptionKo": "+와 x의 등장 확률이 올라갑니다.",
+      "uiDescriptionKo": "+, x 등장 가중치 각각 +2.",
       "implementationNote": "Stability and damage ceiling together. Locked until Stage 3 because it modifies x."
     },
     {
@@ -641,7 +641,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "number 1: TEMP_WEIGHT_MOD_LARGE_DOWN; operators -,÷: TEMP_WEIGHT_MOD_LARGE_DOWN",
       "unlockStage": 3,
-      "uiDescriptionKo": "1, -, ÷의 등장 확률이 크게 내려갑니다.",
+      "uiDescriptionKo": "1, -, ÷ 등장 가중치 각각 -6.",
       "implementationNote": "Strongly removes weak/risky elements. Locked until Stage 3 because it modifies ÷."
     },
     {
@@ -654,7 +654,7 @@
       "effectType": "ModifySpawnWeights",
       "effectPayload": "number 1: TEMP_WEIGHT_MOD_EXTREME_UP",
       "unlockStage": 1,
-      "uiDescriptionKo": "1의 등장 확률이 극적으로 올라갑니다.",
+      "uiDescriptionKo": "1 등장 가중치 +10.",
       "implementationNote": "The hidden display name is intentional. Strong synergy with the future 1 UniqueItem system."
     },
     {
@@ -667,7 +667,7 @@
       "effectType": "AccumulateOneThenTransformNextExpression",
       "effectPayload": "requiredOneCount: TEMP_UNIQUE_1_REQUIRED_ONE_COUNT",
       "unlockStage": 0,
-      "uiDescriptionKo": "1을 3개 사용하면, 다음 유효 수식 1회 동안 1이 11로 계산됩니다.",
+      "uiDescriptionKo": "1을 3개 사용하면 다음 유효 수식 1회에서 1을 11로 계산합니다. 카운트는 스테이지별 초기화.",
       "implementationNote": "PreCalculationTransform. Starting Unique candidate and Unique Shop eligible."
     },
     {
@@ -680,7 +680,7 @@
       "effectType": "ProbabilityBonusDamage",
       "effectPayload": "baseChancePercent: TEMP_UNIQUE_2_BASE_CHANCE_PERCENT; chancePerTwoPercent: TEMP_UNIQUE_2_CHANCE_PER_TWO_PERCENT; maxChancePercent: TEMP_UNIQUE_2_MAX_CHANCE_PERCENT; bonusDamagePercent: TEMP_UNIQUE_2_BONUS_DAMAGE_PERCENT",
       "unlockStage": 0,
-      "uiDescriptionKo": "공격 시 확률적으로 추가 데미지를 줍니다. 수식 안의 2가 많을수록 30% 확률이 올라갑니다.",
+      "uiDescriptionKo": "Attack Mode 양수 결과에서 발동 확률 50% + 수식 내 2 하나당 +30%p(최대 90%). 발동 시 기본 결과값의 50% 추가 피해.",
       "implementationNote": "PostCalculationBonus. Positive Attack Mode only."
     },
     {
@@ -693,7 +693,7 @@
       "effectType": "TrinityThreeSixNine",
       "effectPayload": "attackBonusDamage: TEMP_UNIQUE_3_ATTACK_BONUS_DAMAGE; attackShieldBonus: TEMP_UNIQUE_3_ATTACK_SHIELD_BONUS; defenseShieldBonus: TEMP_UNIQUE_3_DEFENSE_SHIELD_BONUS",
       "unlockStage": 0,
-      "uiDescriptionKo": "한 수식에 3, 6, 9가 하나라도 있으면 추가 효과가 발동합니다. 중첩 가능",
+      "uiDescriptionKo": "3, 6, 9의 서로 다른 종류 1스택당 Attack: 피해 +30, 보호막 +30 / Defense: 보호막 +60. 최대 3스택.",
       "implementationNote": "PostCalculationBonus in Attack and Defense Mode."
     },
     {
@@ -706,7 +706,7 @@
       "effectType": "BoardGenerationOverride",
       "effectPayload": "aCellNumberRatio: TEMP_UNIQUE_4_A_CELL_NUMBER_RATIO; aCellOperatorRatio: TEMP_UNIQUE_4_A_CELL_OPERATOR_RATIO; bCellNumberRatio: TEMP_UNIQUE_4_B_CELL_NUMBER_RATIO; bCellOperatorRatio: TEMP_UNIQUE_4_B_CELL_OPERATOR_RATIO",
       "unlockStage": 0,
-      "uiDescriptionKo": "보드의 숫자/연산자 배치 리듬이 더 뚜렷해집니다.",
+      "uiDescriptionKo": "보유 중 기본 배치 비율 변경. A셀 숫자/연산자 90%/10%, B셀 10%/90%.",
       "implementationNote": "BoardGenerationOverride only. Preserves Layer 2 weights."
     },
     {
@@ -719,7 +719,7 @@
       "effectType": "ShieldPerFiveInExpression",
       "effectPayload": "shieldPerFive: TEMP_UNIQUE_5_SHIELD_PER_FIVE",
       "unlockStage": 0,
-      "uiDescriptionKo": "수식 안의 5 하나당 보호막을 얻습니다.",
+      "uiDescriptionKo": "수식 안의 5 하나당 보호막 +5.",
       "implementationNote": "PostCalculationBonus in Attack and Defense Mode."
     },
     {
@@ -732,7 +732,7 @@
       "effectType": "FlatStageClearGoldBonus",
       "effectPayload": "flatGoldBonus: TEMP_UNIQUE_6_FLAT_GOLD_BONUS",
       "unlockStage": 0,
-      "uiDescriptionKo": "스테이지 클리어 골드가 고정량 증가합니다.",
+      "uiDescriptionKo": "클리어 보상 계산값 +50. 유니크8 보유 시 140% 적용 후 +50, 이후 최종 보상 1.5배 적용.",
       "implementationNote": "RewardModifier. Applied after percent multiplier."
     },
     {
@@ -745,7 +745,7 @@
       "effectType": "ExactLengthSevenBonusDamage",
       "effectPayload": "bonusDamagePercent: TEMP_UNIQUE_7_BONUS_DAMAGE_PERCENT",
       "unlockStage": 0,
-      "uiDescriptionKo": "길이가 정확히 7인 공격 수식이 추가 데미지를 줍니다.",
+      "uiDescriptionKo": "Attack Mode 양수 결과에서 길이 7 수식이면 기본 결과값의 50% 추가 피해.",
       "implementationNote": "PostCalculationBonus. Positive Attack Mode with exact length 7."
     },
     {
@@ -758,7 +758,7 @@
       "effectType": "PercentStageClearGoldBonus",
       "effectPayload": "goldMultiplierPercent: TEMP_UNIQUE_8_GOLD_MULTIPLIER_PERCENT",
       "unlockStage": 0,
-      "uiDescriptionKo": "스테이지 클리어 골드가 비율로 증가합니다.",
+      "uiDescriptionKo": "기본 클리어 골드 140%로 증가. 유니크6의 +50보다 먼저 적용되고, 이후 최종 보상 1.5배 적용.",
       "implementationNote": "RewardModifier. Multiplies base gold before Unique 6."
     },
     {
@@ -771,7 +771,7 @@
       "effectType": "OdinBoardWideNineTransform",
       "effectPayload": "triggerTurnInterval: TEMP_UNIQUE_9_TRIGGER_TURN_INTERVAL; maxTransformValue: TEMP_UNIQUE_9_MAX_TRANSFORM_VALUE; targetValue: TEMP_UNIQUE_9_TARGET_VALUE",
       "unlockStage": 0,
-      "uiDescriptionKo": "3의 배수의 턴마다 보드의 낮은 숫자들이 9로 변합니다.",
+      "uiDescriptionKo": "3턴마다(유효 수식 기준) 계산 전에 보드 전체의 6 이하 숫자 타일을 9로 변환.",
       "implementationNote": "BoardStateTransformBeforeCalculation. Unique 9 has priority over Unique 1."
     }
   ]

@@ -60,6 +60,37 @@ namespace Mathcalibur.Battle
         [SerializeField] private float fadeOutDuration = 0.75f;
         [SerializeField] private float fadeInDuration = 0.75f;
         [SerializeField] private float musicFadeOutDuration = 0.75f;
+        [Header("Convenience HUD")]
+        [SerializeField] private TMP_Text currentGoldText;
+        [SerializeField] private TMP_Text stageText;
+        [SerializeField] private TMP_Text enemyAttackInfoText;
+        [SerializeField] private TMP_Text turnInfoText;
+        [Header("Settings")]
+        [SerializeField] private RectTransform settingsPanelRoot;
+        [SerializeField] private Image settingsBackgroundImage;
+        [SerializeField] private Slider bgmSlider;
+        [SerializeField] private TMP_Text bgmPercentText;
+        [SerializeField] private Slider sfxSlider;
+        [SerializeField] private TMP_Text sfxPercentText;
+        [SerializeField] private Button settingsRestartCurrentStageButton;
+        [SerializeField] private Button settingsBeginAtStage1Button;
+        [SerializeField] private Button settingsToTitleButton;
+        [SerializeField] private Button settingsGoBackButton;
+        [SerializeField] private Button settingsCloseButton;
+        [SerializeField] private Button settingsVibrationButton;
+        [SerializeField] private Image settingsVibrationButtonImage;
+        [SerializeField] private TMP_Text settingsVibrationStatusText;
+        [Header("Settings Images")]
+        [SerializeField] private Sprite settingsBackgroundSprite;
+        [SerializeField] private Sprite settingsBarSprite;
+        [SerializeField] private Sprite settingsButtonSprite;
+        [SerializeField] private Sprite settingsRestartButtonSprite;
+        [SerializeField] private Sprite settingsBeginAtStage1ButtonSprite;
+        [SerializeField] private Sprite settingsToTitleButtonSprite;
+        [SerializeField] private Sprite settingsGoBackButtonSprite;
+        [SerializeField] private Sprite settingsSliderHandleSprite;
+        [SerializeField] private Sprite settingsVibrationOnSprite;
+        [SerializeField] private Sprite settingsVibrationOffSprite;
         private BattleTileView[,] _grid;
         private RectTransform _boardRoot;
         private RectTransform _boardContainer;
@@ -109,6 +140,9 @@ namespace Mathcalibur.Battle
         private RectTransform _defeatBlackBackgroundRoot;
         private RectTransform _mobileExitOverlayRoot;
         private RectTransform _mobileExitPanel;
+        private RectTransform _runtimeStatusPanel;
+        private RectTransform _settingsDimRoot;
+        private RectTransform _settingsPanel;
         private TMP_Text _shopGoldText;
         private TMP_Text _rerollText;
         private TMP_Text _shopConfirmTitleText;
@@ -149,7 +183,6 @@ namespace Mathcalibur.Battle
         private bool _freePurchaseDone;
         private bool _isResolvingTurn;
         private bool _shopOpen;
-        private bool _shopSelectionMade;
         private bool _unique1TransformReady;
         private bool _startingUniqueSelectionOpen;
         private bool _startingUniqueSelectionResolved;
@@ -158,6 +191,7 @@ namespace Mathcalibur.Battle
         private bool _defeatOverlayOpen;
         private bool _defeatTransitioning;
         private bool _mobileExitOverlayOpen;
+        private bool _settingsPanelOpen;
         private int? _pendingStartingUniqueSelectionIndex;
         private string _pendingActiveItemId;
         private ShopSelectionContext? _pendingShopSelection;
@@ -295,13 +329,13 @@ namespace Mathcalibur.Battle
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Escape))
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Backspace))
             {
-                HandleMobileBackButton();
+                HandleBackNavigation();
                 return;
             }
 
-            if (_playerHp <= 0 || _enemyHp <= 0 || _shopOpen || _startingUniqueSelectionOpen || _activeItemConfirmOpen || _defeatOverlayOpen || _isResolvingTurn || IsBagPanelOpen() || IsPercentagePanelOpen())
+            if (_playerHp <= 0 || _enemyHp <= 0 || _shopOpen || _startingUniqueSelectionOpen || _activeItemConfirmOpen || _defeatOverlayOpen || _settingsPanelOpen || _isResolvingTurn || IsBagPanelOpen() || IsPercentagePanelOpen())
             {
                 return;
             }
@@ -391,7 +425,8 @@ namespace Mathcalibur.Battle
                 if ((_shopOpen && _shopOverlayRoot != null && go.transform.IsChildOf(_shopOverlayRoot)) ||
                     (_startingUniqueSelectionOpen && _startUniqueOverlayRoot != null && go.transform.IsChildOf(_startUniqueOverlayRoot)) ||
                     (_activeItemConfirmOpen && _activeItemConfirmOverlayRoot != null && go.transform.IsChildOf(_activeItemConfirmOverlayRoot)) ||
-                    (_defeatOverlayOpen && _defeatOverlayRoot != null && go.transform.IsChildOf(_defeatOverlayRoot)))
+                    (_defeatOverlayOpen && _defeatOverlayRoot != null && go.transform.IsChildOf(_defeatOverlayRoot)) ||
+                    (_settingsPanelOpen && settingsPanelRoot != null && go.transform.IsChildOf(settingsPanelRoot)))
                 {
                     return true;
                 }
@@ -483,6 +518,8 @@ namespace Mathcalibur.Battle
             }
 
             BuildCombatModeControls(hudRoot);
+            BuildConvenienceHud(hudRoot);
+            BuildSettingsPanel(canvasRoot);
             BindBagLayout();
             BindPercentageLayout();
             BuildStartingUniqueSelectionOverlay(canvasRoot);
@@ -506,6 +543,231 @@ namespace Mathcalibur.Battle
             _attackModeButton = ResolveCombatModeButton(CombatMode.Attack, _boardLayoutReference != null ? _boardLayoutReference.AttackModeButton : null);
             _defenseModeButton = ResolveCombatModeButton(CombatMode.Defense, _boardLayoutReference != null ? _boardLayoutReference.DefenseModeButton : null);
             RefreshCombatModeButtons();
+        }
+
+        private void BuildConvenienceHud(RectTransform hudRoot)
+        {
+            if (hudRoot == null)
+            {
+                return;
+            }
+
+            if (currentGoldText == null || stageText == null || enemyAttackInfoText == null || turnInfoText == null)
+            {
+                _runtimeStatusPanel = CreateUiPanel("BattleStatusPanel", hudRoot, new Vector2(0.04f, 0.74f), new Vector2(0.58f, 0.94f), Vector2.zero, Vector2.zero);
+                var statusBackground = _runtimeStatusPanel.gameObject.AddComponent<Image>();
+                statusBackground.color = new Color(0f, 0f, 0f, 0.35f);
+                statusBackground.raycastTarget = false;
+
+                currentGoldText ??= CreateStatusText("CurrentGoldText", _runtimeStatusPanel, 0.82f);
+                stageText ??= CreateStatusText("StageText", _runtimeStatusPanel, 0.58f);
+                enemyAttackInfoText ??= CreateStatusText("EnemyAttackInfoText", _runtimeStatusPanel, 0.34f);
+                turnInfoText ??= CreateStatusText("TurnInfoText", _runtimeStatusPanel, 0.10f);
+            }
+
+            var settingsButton = CreateActionButton(hudRoot, "Settings", new Vector2(0.86f, 0.94f), ToggleSettingsPanel, false, 180f, 64f, config.ShopFontSizeScale);
+            SetButtonTextColor(settingsButton, config.ShopButtonTextColor);
+            RefreshConvenienceHud();
+        }
+
+        private TMP_Text CreateStatusText(string name, RectTransform parent, float normalizedY)
+        {
+            var text = CreateText(name, parent, new Vector2(0.04f, normalizedY), 26f, config.ShopFontSizeScale);
+            text.rectTransform.anchorMin = text.rectTransform.anchorMax = new Vector2(0.04f, normalizedY);
+            text.rectTransform.pivot = new Vector2(0f, 0.5f);
+            text.rectTransform.sizeDelta = new Vector2(560f, 44f);
+            text.alignment = TextAlignmentOptions.MidlineLeft;
+            text.color = Color.white;
+            return text;
+        }
+
+        private void BuildSettingsPanel(RectTransform canvasRoot)
+        {
+            if (canvasRoot == null)
+            {
+                return;
+            }
+
+            _settingsDimRoot = CreateUiPanel("SettingsDimOverlay", canvasRoot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var dimImage = _settingsDimRoot.gameObject.AddComponent<Image>();
+            dimImage.color = new Color(0f, 0f, 0f, 0.55f);
+            dimImage.raycastTarget = true;
+
+            if (settingsPanelRoot == null)
+            {
+                _settingsPanel = CreateCenteredSquarePanel("SettingsPanel", _settingsDimRoot, config.ShopConfirmPanelSide);
+                settingsPanelRoot = _settingsPanel;
+            }
+            else
+            {
+                settingsPanelRoot.SetParent(_settingsDimRoot, false);
+            }
+
+            settingsBackgroundImage = settingsBackgroundImage != null
+                ? settingsBackgroundImage
+                : settingsPanelRoot.GetComponent<Image>() ?? settingsPanelRoot.gameObject.AddComponent<Image>();
+            ApplySettingsPanelVisual();
+
+            var titleText = CreateText("SettingsTitle", settingsPanelRoot, new Vector2(0.5f, 0.88f), 42f, config.ShopFontSizeScale);
+            titleText.rectTransform.anchorMin = titleText.rectTransform.anchorMax = new Vector2(0.5f, 0.88f);
+            titleText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            titleText.rectTransform.sizeDelta = new Vector2(720f, 72f);
+            titleText.alignment = TextAlignmentOptions.Center;
+            titleText.color = config.ShopPanelTextColor;
+            titleText.text = "Settings";
+
+            EnsureSettingsVolumeControls();
+            EnsureSettingsVibrationControl();
+            EnsureSettingsActionButtons();
+            BindSettingsControls();
+
+            _settingsDimRoot.gameObject.SetActive(false);
+            settingsPanelRoot.gameObject.SetActive(false);
+            _settingsPanelOpen = false;
+        }
+
+        private void ApplySettingsPanelVisual()
+        {
+            if (settingsBackgroundImage == null)
+            {
+                return;
+            }
+
+            var sprite = settingsBackgroundSprite != null ? settingsBackgroundSprite : config.ShopConfirmPanelSprite;
+            ApplyPanelVisual(settingsBackgroundImage, sprite, config.ShopConfirmPanelColor);
+        }
+
+        private void EnsureSettingsVolumeControls()
+        {
+            if (bgmSlider == null)
+            {
+                bgmSlider = CreateSettingsSlider("BGM", new Vector2(0.50f, 0.74f), out var percentText);
+                bgmPercentText = percentText;
+            }
+
+            if (sfxSlider == null)
+            {
+                sfxSlider = CreateSettingsSlider("SFX", new Vector2(0.50f, 0.62f), out var percentText);
+                sfxPercentText = percentText;
+            }
+        }
+
+        private Slider CreateSettingsSlider(string label, Vector2 anchor, out TMP_Text percentText)
+        {
+            var labelText = CreateText(label + "Label", settingsPanelRoot, new Vector2(0.18f, anchor.y), 28f, config.ShopFontSizeScale);
+            labelText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            labelText.rectTransform.sizeDelta = new Vector2(180f, 48f);
+            labelText.alignment = TextAlignmentOptions.Center;
+            labelText.color = config.ShopPanelTextColor;
+            labelText.text = label;
+
+            var sliderRoot = CreateUiPanel(label + "Slider", settingsPanelRoot, anchor, anchor, Vector2.zero, Vector2.zero);
+            sliderRoot.pivot = new Vector2(0.5f, 0.5f);
+            sliderRoot.sizeDelta = new Vector2(430f, 40f);
+
+            var background = new GameObject("Background", typeof(Image)).GetComponent<Image>();
+            background.transform.SetParent(sliderRoot, false);
+            background.rectTransform.anchorMin = new Vector2(0f, 0.35f);
+            background.rectTransform.anchorMax = new Vector2(1f, 0.65f);
+            background.rectTransform.offsetMin = Vector2.zero;
+            background.rectTransform.offsetMax = Vector2.zero;
+            background.sprite = settingsBarSprite;
+            background.type = settingsBarSprite != null ? Image.Type.Sliced : Image.Type.Simple;
+            background.color = new Color(0.22f, 0.22f, 0.22f, 1f);
+
+            var fillArea = CreateUiPanel("Fill Area", sliderRoot, new Vector2(0f, 0.35f), new Vector2(1f, 0.65f), Vector2.zero, Vector2.zero);
+            var fill = new GameObject("Fill", typeof(Image)).GetComponent<Image>();
+            fill.transform.SetParent(fillArea, false);
+            fill.rectTransform.anchorMin = Vector2.zero;
+            fill.rectTransform.anchorMax = Vector2.one;
+            fill.rectTransform.offsetMin = Vector2.zero;
+            fill.rectTransform.offsetMax = Vector2.zero;
+            fill.sprite = settingsBarSprite;
+            fill.type = settingsBarSprite != null ? Image.Type.Sliced : Image.Type.Simple;
+            fill.color = new Color(0.82f, 0.82f, 0.82f, 1f);
+
+            var handleArea = CreateUiPanel("Handle Slide Area", sliderRoot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var handle = new GameObject("Handle", typeof(Image)).GetComponent<Image>();
+            handle.transform.SetParent(handleArea, false);
+            handle.rectTransform.sizeDelta = new Vector2(34f, 34f);
+            handle.sprite = settingsSliderHandleSprite;
+            handle.color = Color.white;
+
+            var slider = sliderRoot.gameObject.AddComponent<Slider>();
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.wholeNumbers = false;
+            slider.targetGraphic = handle;
+            slider.fillRect = fill.rectTransform;
+            slider.handleRect = handle.rectTransform;
+
+            percentText = CreateText(label + "PercentText", settingsPanelRoot, new Vector2(0.84f, anchor.y), 26f, config.ShopFontSizeScale);
+            percentText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            percentText.rectTransform.sizeDelta = new Vector2(140f, 48f);
+            percentText.alignment = TextAlignmentOptions.Center;
+            percentText.color = config.ShopPanelTextColor;
+            return slider;
+        }
+
+        private void EnsureSettingsActionButtons()
+        {
+            settingsRestartCurrentStageButton ??= CreateSettingsButton("Retry Stage", new Vector2(0.5f, 0.38f), OnSettingsRetryCurrentStage, settingsRestartButtonSprite);
+            settingsBeginAtStage1Button ??= CreateSettingsButton("Restart Run", new Vector2(0.5f, 0.28f), OnSettingsRestartFromBeginning, settingsBeginAtStage1ButtonSprite);
+            settingsToTitleButton ??= CreateSettingsButton("Title", new Vector2(0.5f, 0.18f), OnSettingsReturnToTitle, settingsToTitleButtonSprite);
+            settingsGoBackButton ??= CreateSettingsButton("Back", new Vector2(0.5f, 0.08f), CloseSettingsPanel, settingsGoBackButtonSprite);
+            settingsCloseButton ??= settingsGoBackButton;
+        }
+
+        private void EnsureSettingsVibrationControl()
+        {
+            settingsVibrationButton ??= CreateSettingsButton("Vibration: ON", new Vector2(0.5f, 0.50f), OnSettingsVibrationPressed, settingsVibrationOnSprite);
+            settingsVibrationButtonImage ??= GetButtonImage(settingsVibrationButton);
+            settingsVibrationStatusText ??= GetButtonVisualRefs(settingsVibrationButton)?.Label ?? settingsVibrationButton.GetComponentInChildren<TextMeshProUGUI>();
+            RefreshSettingsVibrationUi();
+        }
+
+        private Button CreateSettingsButton(string label, Vector2 anchor, Action callback, Sprite sprite)
+        {
+            var button = CreateActionButton(settingsPanelRoot, label, anchor, callback, false, config.ShopConfirmActionButtonWidth * 1.55f, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
+            ApplySettingsButtonSprite(button, sprite);
+            SetButtonTextColor(button, config.ShopButtonTextColor);
+            return button;
+        }
+
+        private void ApplySettingsButtonSprite(Button button, Sprite overrideSprite)
+        {
+            var image = GetButtonImage(button);
+            if (image == null)
+            {
+                return;
+            }
+
+            var sprite = overrideSprite != null ? overrideSprite : settingsButtonSprite;
+            image.sprite = sprite;
+            image.type = sprite != null ? Image.Type.Sliced : Image.Type.Simple;
+            image.color = Color.white;
+        }
+
+        private void BindSettingsControls()
+        {
+            if (bgmSlider != null)
+            {
+                bgmSlider.onValueChanged.RemoveListener(OnBgmVolumeChanged);
+                bgmSlider.onValueChanged.AddListener(OnBgmVolumeChanged);
+            }
+
+            if (sfxSlider != null)
+            {
+                sfxSlider.onValueChanged.RemoveListener(OnSfxVolumeChanged);
+                sfxSlider.onValueChanged.AddListener(OnSfxVolumeChanged);
+            }
+
+            BindButton(settingsRestartCurrentStageButton, OnSettingsRetryCurrentStage);
+            BindButton(settingsBeginAtStage1Button, OnSettingsRestartFromBeginning);
+            BindButton(settingsToTitleButton, OnSettingsReturnToTitle);
+            BindButton(settingsGoBackButton, CloseSettingsPanel);
+            BindButton(settingsCloseButton, CloseSettingsPanel);
+            BindButton(settingsVibrationButton, OnSettingsVibrationPressed);
         }
 
         private Button ResolveCombatModeButton(CombatMode mode, BattleBoardLayoutReference.CombatModeButtonReference buttonReference)
@@ -591,7 +853,7 @@ namespace Mathcalibur.Battle
             title.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             title.rectTransform.sizeDelta = new Vector2(760f, 70f);
             title.alignment = TextAlignmentOptions.Center;
-            title.text = "시작 Unique Item 선택";
+            title.text = "시작 유니크 선택";
             title.color = config.StartingUniquePanelTextColor;
 
             var subtitle = CreateText("StartingUniqueSubtitle", _startUniquePanel, new Vector2(0.5f, 0.78f), 24f, config.ShopFontSizeScale);
@@ -605,7 +867,7 @@ namespace Mathcalibur.Battle
             for (var i = 0; i < 3; i++)
             {
                 var index = i;
-                var button = CreateActionButton(_startUniquePanel, $"Unique {i + 1}", new Vector2((i + 0.5f) / 3f, 0.42f), () => OpenStartingUniqueConfirmPanel(index), false, config.StartingUniqueButtonWidth, config.StartingUniqueButtonHeight, config.ShopFontSizeScale, config.StartingUniqueSelectionButtonStyle);
+                var button = CreateActionButton(_startUniquePanel, $"유니크 {i + 1}", new Vector2((i + 0.5f) / 3f, 0.42f), () => OpenStartingUniqueConfirmPanel(index), false, config.StartingUniqueButtonWidth, config.StartingUniqueButtonHeight, config.ShopFontSizeScale, config.StartingUniqueSelectionButtonStyle);
                 button.GetComponentInChildren<TextMeshProUGUI>().alignment = TextAlignmentOptions.Center;
                 SetButtonTextColor(button, config.StartingUniqueButtonTextColor);
                 _startingUniqueButtons.Add(button);
@@ -1166,7 +1428,6 @@ namespace Mathcalibur.Battle
 
             _isResolvingTurn = false;
             _shopOpen = false;
-            _shopSelectionMade = false;
             _freePurchaseDone = false;
             _startingUniqueSelectionOpen = false;
             _startingUniqueSelectionResolved = false;
@@ -1189,6 +1450,7 @@ namespace Mathcalibur.Battle
             SetDimOverlayVisible(_shopConfirmDimRoot, false);
             SetDimOverlayVisible(_bagDimRoot, false);
             SetDimOverlayVisible(_percentageDimRoot, false);
+            CloseSettingsPanel();
             RestoreShopPanelParent();
 
             if (_startUniqueOverlayRoot != null)
@@ -1250,7 +1512,6 @@ namespace Mathcalibur.Battle
 
             _isResolvingTurn = false;
             _shopOpen = false;
-            _shopSelectionMade = false;
             _freePurchaseDone = false;
             _startingUniqueSelectionOpen = false;
             _activeItemConfirmOpen = false;
@@ -1289,6 +1550,7 @@ namespace Mathcalibur.Battle
             SetDimOverlayVisible(_shopConfirmDimRoot, false);
             SetDimOverlayVisible(_bagDimRoot, false);
             SetDimOverlayVisible(_percentageDimRoot, false);
+            CloseSettingsPanel();
             RestoreShopPanelParent();
             CloseBagPanel();
             ClosePercentagePanel();
@@ -1420,6 +1682,198 @@ namespace Mathcalibur.Battle
             if (_mobileExitOverlayRoot != null)
             {
                 _mobileExitOverlayRoot.gameObject.SetActive(false);
+            }
+        }
+
+        public void OpenSettingsPanel()
+        {
+            if (settingsPanelRoot == null)
+            {
+                return;
+            }
+
+            if (_dragging || _selection.Count > 0)
+            {
+                _dragging = false;
+                ClearSelectionVisual();
+            }
+
+            CloseBagPanel();
+            ClosePercentagePanel();
+            SyncSettingsVolumeUi();
+            RefreshSettingsVibrationUi();
+            _settingsPanelOpen = true;
+            if (_settingsDimRoot != null)
+            {
+                _settingsDimRoot.SetAsLastSibling();
+                _settingsDimRoot.gameObject.SetActive(true);
+            }
+
+            settingsPanelRoot.SetAsLastSibling();
+            settingsPanelRoot.gameObject.SetActive(true);
+        }
+
+        private void SyncSettingsVolumeUi()
+        {
+            var bgmVolume = GameAudioManager.Instance != null ? GameAudioManager.Instance.MusicVolume : 1f;
+            var sfxVolume = GameAudioManager.Instance != null ? GameAudioManager.Instance.SfxVolume : 1f;
+
+            if (bgmSlider != null)
+            {
+                bgmSlider.SetValueWithoutNotify(Mathf.Clamp01(bgmVolume));
+            }
+
+            if (sfxSlider != null)
+            {
+                sfxSlider.SetValueWithoutNotify(Mathf.Clamp01(sfxVolume));
+            }
+
+            RefreshVolumePercentTexts();
+        }
+
+        private void OnBgmVolumeChanged(float value)
+        {
+            GameAudioManager.Instance?.SetBgmVolume(value);
+            RefreshVolumePercentTexts();
+        }
+
+        private void OnSfxVolumeChanged(float value)
+        {
+            GameAudioManager.Instance?.SetSfxVolume(value);
+            RefreshVolumePercentTexts();
+        }
+
+        private void RefreshVolumePercentTexts()
+        {
+            if (bgmPercentText != null)
+            {
+                var value = bgmSlider != null ? bgmSlider.value : GameAudioManager.Instance != null ? GameAudioManager.Instance.MusicVolume : 1f;
+                bgmPercentText.text = FormatVolumePercent(value);
+            }
+
+            if (sfxPercentText != null)
+            {
+                var value = sfxSlider != null ? sfxSlider.value : GameAudioManager.Instance != null ? GameAudioManager.Instance.SfxVolume : 1f;
+                sfxPercentText.text = FormatVolumePercent(value);
+            }
+        }
+
+        private static string FormatVolumePercent(float value)
+        {
+            return $"{Mathf.RoundToInt(Mathf.Clamp01(value) * 100f)}%";
+        }
+
+        private void OnSettingsVibrationPressed()
+        {
+            HapticManager.Instance.ToggleEnabled();
+            RefreshSettingsVibrationUi();
+        }
+
+        private void RefreshSettingsVibrationUi()
+        {
+            var isEnabled = HapticManager.Instance.IsEnabled;
+            if (settingsVibrationStatusText != null)
+            {
+                settingsVibrationStatusText.text = isEnabled ? "Vibration: ON" : "Vibration: OFF";
+            }
+
+            if (settingsVibrationButtonImage != null)
+            {
+                var sprite = isEnabled ? settingsVibrationOnSprite : settingsVibrationOffSprite;
+                if (sprite != null)
+                {
+                    settingsVibrationButtonImage.sprite = sprite;
+                    settingsVibrationButtonImage.type = Image.Type.Sliced;
+                    settingsVibrationButtonImage.color = Color.white;
+                }
+                else
+                {
+                    settingsVibrationButtonImage.color = isEnabled
+                        ? Color.white
+                        : new Color(0.55f, 0.55f, 0.55f, 1f);
+                }
+            }
+        }
+
+        private void OnSettingsRetryCurrentStage()
+        {
+            CloseSettingsPanel();
+            BeginDefeatLocalTransition(RetryCurrentStage);
+        }
+
+        private void OnSettingsRestartFromBeginning()
+        {
+            CloseSettingsPanel();
+            BeginDefeatLocalTransition(RestartFromBeginning);
+        }
+
+        private void OnSettingsReturnToTitle()
+        {
+            CloseSettingsPanel();
+            OnMenuButtonPressed();
+        }
+
+        public void CloseSettingsPanel()
+        {
+            _settingsPanelOpen = false;
+            if (settingsPanelRoot != null)
+            {
+                settingsPanelRoot.gameObject.SetActive(false);
+            }
+
+            if (_settingsDimRoot != null)
+            {
+                _settingsDimRoot.gameObject.SetActive(false);
+            }
+        }
+
+        public void ToggleSettingsPanel()
+        {
+            if (_settingsPanelOpen)
+            {
+                CloseSettingsPanel();
+                return;
+            }
+
+            OpenSettingsPanel();
+        }
+
+        private void HandleBackNavigation()
+        {
+            if (_settingsPanelOpen)
+            {
+                CloseSettingsPanel();
+                return;
+            }
+
+            if (_activeItemConfirmOpen)
+            {
+                CloseActiveItemConfirmPanel();
+                return;
+            }
+
+            if (_pendingShopSelection != null || _shopConfirmPanel != null && _shopConfirmPanel.gameObject.activeInHierarchy)
+            {
+                CloseShopConfirmPanel();
+                return;
+            }
+
+            if (IsBagPanelOpen())
+            {
+                CloseBagPanel();
+                return;
+            }
+
+            if (IsPercentagePanelOpen())
+            {
+                ClosePercentagePanel();
+                return;
+            }
+
+            if (_mobileExitOverlayOpen)
+            {
+                CloseMobileExitOverlay();
+                return;
             }
         }
 
@@ -2383,6 +2837,7 @@ namespace Mathcalibur.Battle
             if (!isFirstSelectedTile)
             {
                 GameAudioManager.Instance?.PlayDragTouchSfx();
+                HapticManager.Instance.PlayLight();
             }
             RefreshHud(GetExpressionString(), "-");
         }
@@ -2432,6 +2887,10 @@ namespace Mathcalibur.Battle
             var enemyHpBefore = _enemyHp;
             ApplyCombatResult(baseResult, uniqueOutcome);
             var dealtDamage = Mathf.Max(0, enemyHpBefore - _enemyHp);
+            if (_currentCombatMode == CombatMode.Attack && dealtDamage >= 20)
+            {
+                HapticManager.Instance.PlayHeavy();
+            }
 
             GameAudioManager.Instance?.PlayExpressionConfirmSfx();
 
@@ -2508,6 +2967,10 @@ namespace Mathcalibur.Battle
                 _playerShield = 0;
                 _playerHp = Mathf.Max(0, _playerHp - damageAfterShield);
                 TriggerEnemyAttackCameraShake(damageAfterShield > 0);
+                if (damageAfterShield > 0)
+                {
+                    HapticManager.Instance.PlayMedium();
+                }
                 RefreshHud(string.Empty, resultText);
                 _hud.SetMessage(damageAfterShield > 0 ? $"Enemy attacked for {damageAfterShield}!" : "Enemy attack was blocked by shield!");
             }
@@ -2746,7 +3209,7 @@ namespace Mathcalibur.Battle
                     if (UnityEngine.Random.Range(0, 100) < chance)
                     {
                         bonusDamage += Mathf.CeilToInt(baseResult * (_itemDatabase.ResolveEffectInt(unique2, "bonusDamagePercent") / 100f));
-                        messageParts.Add("Unique 2 발동");
+                        messageParts.Add("유니크 2 발동");
                     }
                 }
             }
@@ -2769,7 +3232,7 @@ namespace Mathcalibur.Battle
                         shieldBonus += unique3StackCount * _itemDatabase.ResolveEffectInt(unique3, "defenseShieldBonus");
                     }
 
-                    messageParts.Add("Unique 3 발동");
+                    messageParts.Add("유니크 3 발동");
                 }
             }
 
@@ -2781,7 +3244,7 @@ namespace Mathcalibur.Battle
                     if (countFive > 0)
                     {
                         shieldBonus += countFive * _itemDatabase.ResolveEffectInt(unique5, "shieldPerFive");
-                        messageParts.Add("Unique 5 발동");
+                        messageParts.Add("유니크 5 발동");
                     }
                 }
             }
@@ -2791,7 +3254,7 @@ namespace Mathcalibur.Battle
                 if (_itemDatabase.TryGetItem(Unique7ItemId, out var unique7))
                 {
                     bonusDamage += Mathf.CeilToInt(baseResult * (_itemDatabase.ResolveEffectInt(unique7, "bonusDamagePercent") / 100f));
-                    messageParts.Add("Unique 7 발동");
+                    messageParts.Add("유니크 7 발동");
                 }
             }
 
@@ -3932,6 +4395,42 @@ namespace Mathcalibur.Battle
             _hud.SetExpression(expression);
             _hud.SetResult(result);
             _hud.SetValidationStatus(GetCurrentExpressionValidity());
+            RefreshConvenienceHud();
+        }
+
+        private void RefreshConvenienceHud()
+        {
+            if (_playerState == null)
+            {
+                return;
+            }
+
+            if (currentGoldText != null)
+            {
+                currentGoldText.text = $"Gold: {_playerState.Gold}";
+            }
+
+            if (stageText != null)
+            {
+                stageText.text = $"Stage {_playerState.CurrentStage} / {MaxStage}";
+            }
+
+            if (enemyAttackInfoText != null)
+            {
+                var attackCycle = Mathf.Max(1, _currentStage.EnemyAttackCycle);
+                enemyAttackInfoText.text = $"Enemy ATK: {_currentStage.EnemyAttackDamage} / {attackCycle}T";
+            }
+
+            if (turnInfoText != null)
+            {
+                turnInfoText.text = $"Turn: {_validTurnCount} / Enemy Attack In: {GetTurnsUntilEnemyAttack()}";
+            }
+        }
+
+        private int GetTurnsUntilEnemyAttack()
+        {
+            var attackCycle = Mathf.Max(1, _currentStage.EnemyAttackCycle);
+            return attackCycle - (_validTurnCount % attackCycle);
         }
 
         private bool? GetCurrentExpressionValidity()
@@ -3948,6 +4447,7 @@ namespace Mathcalibur.Battle
         {
             var reward = GetStageClearGoldReward();
             _playerState.Gold += reward;
+            RefreshConvenienceHud();
             if (_playerState.CurrentStage >= MaxStage)
             {
                 _hud.SetMessage("Victory! Demon King defeated.");
@@ -4016,7 +4516,6 @@ namespace Mathcalibur.Battle
             }
 
             _shopOpen = true;
-            _shopSelectionMade = false;
             EnsureShoppingParentsActive();
             if (_startUniqueOverlayRoot != null)
             {
@@ -4040,7 +4539,7 @@ namespace Mathcalibur.Battle
                 shopFrontTarget.SetAsLastSibling();
             }
 
-            RollShop();
+            RollShop(true);
         }
 
         private void BuildShopPanel()
@@ -4751,65 +5250,99 @@ namespace Mathcalibur.Battle
             return button != null ? button.GetComponent<BattleButtonVisualRefs>() : null;
         }
 
-        private void RollShop()
+        private void RollShop(bool resetLockedSlots = true)
         {
             CloseShopConfirmPanel();
-            _freePurchaseDone = false;
-            _freeSlots.Clear();
-            _paidSlots.Clear();
-            RollFreeSlots();
-            RollPaidSlots();
+            if (resetLockedSlots)
+            {
+                _freePurchaseDone = false;
+                _freeSlots.Clear();
+                _paidSlots.Clear();
+            }
+
+            RollFreeSlots(!resetLockedSlots);
+            RollPaidSlots(!resetLockedSlots);
             RefreshShopUi();
         }
 
-        private void RollFreeSlots()
+        private void RollFreeSlots(bool preserveLockedSlots)
         {
-            var chosenIds = new HashSet<string>(StringComparer.Ordinal);
+            var chosenIds = BuildVisibleShopItemIdSet(-1);
             for (var i = 0; i < 3; i++)
             {
-                var item = PickRandomEligibleItem(ItemSlotKind.Free, chosenIds, null);
-                if (item == null)
+                if (preserveLockedSlots && i < _freeSlots.Count && _freeSlots[i].IsLocked)
                 {
-                    _freeSlots.Add(ShopSlotData.CreateLockedPlaceholder(true, "Locked"));
                     continue;
                 }
 
-                chosenIds.Add(item.itemId);
-                _freeSlots.Add(ShopSlotData.CreateItem(item, 0, true, ItemSlotKind.Free));
+                var item = PickRandomEligibleItem(ItemSlotKind.Free, chosenIds, null);
+                ShopSlotData newSlot;
+                if (item == null)
+                {
+                    newSlot = ShopSlotData.CreateLockedPlaceholder(true, "Locked");
+                }
+                else
+                {
+                    chosenIds.Add(item.itemId);
+                    newSlot = ShopSlotData.CreateItem(item, 0, true, ItemSlotKind.Free);
+                }
+
+                SetShopSlot(_freeSlots, i, newSlot);
             }
         }
 
-        private void RollPaidSlots()
+        private void RollPaidSlots(bool preserveLockedSlots)
         {
-            var chosenIds = new HashSet<string>(StringComparer.Ordinal);
+            var chosenIds = BuildVisibleShopItemIdSet(-1);
             var useUniqueSlot = IsUniqueShop();
             for (var i = 0; i < 3; i++)
             {
+                if (preserveLockedSlots && i < _paidSlots.Count && _paidSlots[i].IsLocked)
+                {
+                    continue;
+                }
+
+                ShopSlotData newSlot;
                 if (useUniqueSlot && i == GetUniqueShopSlotIndex())
                 {
                     var uniqueItem = PickRandomEligibleItem(ItemSlotKind.Unique, chosenIds, null);
                     if (uniqueItem == null)
                     {
                         Debug.LogWarning("Unique shop reached, but no eligible UniqueItem exists for the Unique Item Slot.");
-                        _paidSlots.Add(ShopSlotData.CreateLockedPlaceholder(false, "Unique\nLocked"));
+                        newSlot = ShopSlotData.CreateLockedPlaceholder(false, "Unique\nLocked");
+                        SetShopSlot(_paidSlots, i, newSlot);
                         continue;
                     }
 
                     chosenIds.Add(uniqueItem.itemId);
-                    _paidSlots.Add(ShopSlotData.CreateItem(uniqueItem, _itemDatabase.ResolvePrice(uniqueItem), false, ItemSlotKind.Unique));
+                    newSlot = ShopSlotData.CreateItem(uniqueItem, _itemDatabase.ResolvePrice(uniqueItem), false, ItemSlotKind.Unique);
+                    SetShopSlot(_paidSlots, i, newSlot);
                     continue;
                 }
 
                 var item = PickRandomEligiblePaidItem(chosenIds);
                 if (item == null)
                 {
-                    _paidSlots.Add(ShopSlotData.CreateLockedPlaceholder(false, "Locked"));
-                    continue;
+                    newSlot = ShopSlotData.CreateLockedPlaceholder(false, "Locked");
+                }
+                else
+                {
+                    chosenIds.Add(item.itemId);
+                    newSlot = ShopSlotData.CreateItem(item, _itemDatabase.ResolvePrice(item), false, ItemSlotKind.Paid);
                 }
 
-                chosenIds.Add(item.itemId);
-                _paidSlots.Add(ShopSlotData.CreateItem(item, _itemDatabase.ResolvePrice(item), false, ItemSlotKind.Paid));
+                SetShopSlot(_paidSlots, i, newSlot);
             }
+        }
+
+        private static void SetShopSlot(List<ShopSlotData> slots, int index, ShopSlotData slot)
+        {
+            while (slots.Count <= index)
+            {
+                slots.Add(null);
+            }
+
+            slots[index] = slot;
         }
 
         private bool IsUniqueShop()
@@ -5005,6 +5538,7 @@ namespace Mathcalibur.Battle
                 return;
             }
 
+            var purchasedItemId = slot.Item.itemId;
             if (!selection.IsFree)
             {
                 _playerState.Gold -= slot.Cost;
@@ -5012,16 +5546,11 @@ namespace Mathcalibur.Battle
 
             _itemEffectResolver.ApplyAcquiredItem(slot.Item, _runtimeItemInventory, _itemDatabase, this);
             RefreshBoardTileSpriteVisuals();
-            _shopSelectionMade = true;
-
             if (selection.IsFree)
             {
                 _freePurchaseDone = true;
-                for (var i = 0; i < _freeSlots.Count; i++)
-                {
-                    _freeSlots[i].IsLocked = true;
-                    _freeSlots[i].OverrideLabel = i == selection.Index ? "Selected" : "Locked";
-                }
+                slot.IsLocked = true;
+                slot.OverrideLabel = "Selected";
             }
             else
             {
@@ -5029,10 +5558,38 @@ namespace Mathcalibur.Battle
                 slot.OverrideLabel = "Purchased";
             }
 
-            ReevaluateVisibleDuplicateEligibility(slot.Item.itemId);
+            ReevaluateVisibleDuplicateEligibility(purchasedItemId);
             CloseShopConfirmPanel();
             RefreshShopUi();
             RefreshHud(string.Empty, "-");
+        }
+
+        private HashSet<string> BuildVisibleShopItemIdSet(int excludedPaidSlotIndex)
+        {
+            var excludedIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var slot in _freeSlots)
+            {
+                if (!string.IsNullOrWhiteSpace(slot?.Item?.itemId))
+                {
+                    excludedIds.Add(slot.Item.itemId);
+                }
+            }
+
+            for (var i = 0; i < _paidSlots.Count; i++)
+            {
+                if (i == excludedPaidSlotIndex)
+                {
+                    continue;
+                }
+
+                var itemId = _paidSlots[i]?.Item?.itemId;
+                if (!string.IsNullOrWhiteSpace(itemId))
+                {
+                    excludedIds.Add(itemId);
+                }
+            }
+
+            return excludedIds;
         }
 
         private void ReevaluateVisibleDuplicateEligibility(string itemId)
@@ -5068,7 +5625,7 @@ namespace Mathcalibur.Battle
                     continue;
                 }
 
-                BindSlotButton(_freeButtons[i], _freeSlots[i], _freeSlots[i].IsLocked || _freePurchaseDone && _freeSlots[i].OverrideLabel != "Selected", GetShopSlotReference(true, i));
+                BindSlotButton(_freeButtons[i], _freeSlots[i], _freeSlots[i].IsLocked, GetShopSlotReference(true, i));
             }
 
             for (var i = 0; i < _paidButtons.Count; i++)
@@ -5087,10 +5644,10 @@ namespace Mathcalibur.Battle
                 var rerollText = _rerollText != null ? _rerollText : _rerollButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (rerollText != null)
                 {
-                    rerollText.text = _shopSelectionMade ? "Locked" : $"{rerollCost}G";
+                    rerollText.text = $"{rerollCost}G";
                 }
 
-                _rerollButton.interactable = !_shopSelectionMade && _playerState.Gold >= rerollCost;
+                _rerollButton.interactable = _playerState.Gold >= rerollCost;
                 SetButtonInteractableVisual(_rerollButton, _rerollButton.interactable);
             }
 
@@ -5222,11 +5779,6 @@ namespace Mathcalibur.Battle
 
         private void OnRerollPressed()
         {
-            if (_shopSelectionMade)
-            {
-                return;
-            }
-
             var cost = GetCurrentRerollCost();
             if (_playerState.Gold < cost)
             {
@@ -5235,7 +5787,8 @@ namespace Mathcalibur.Battle
 
             _playerState.Gold -= cost;
             _playerState.RerollUsedCountThisRun++;
-            RollShop();
+            RollShop(false);
+            RefreshHud(string.Empty, "-");
         }
 
         private void OnNextStagePressed()

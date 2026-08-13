@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Mathcalibur.Battle;
+using Mathcalibur.Audio;
 using UnityEngine;
 
 public enum BattleAttackMotionType
@@ -817,7 +818,8 @@ public class BattleAnimationManager : MonoBehaviour
         if (clip == null || sfxSource == null)
             return;
 
-        sfxSource.PlayOneShot(clip);
+        var volume = GameAudioManager.Instance != null ? GameAudioManager.Instance.SfxVolume : 1f;
+        sfxSource.PlayOneShot(clip, volume);
     }
 
     [ContextMenu("Test/Play By Test Damage")]

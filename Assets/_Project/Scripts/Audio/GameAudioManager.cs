@@ -6,6 +6,8 @@ namespace Mathcalibur.Audio
     public class GameAudioManager : MonoBehaviour
     {
         private const float GeneralTouchButtonSuppressSeconds = 2f;
+        private const string BgmVolumePrefsKey = "Mathcalibur_BgmVolume";
+        private const string SfxVolumePrefsKey = "Mathcalibur_SfxVolume";
 
         public static GameAudioManager Instance { get; private set; }
 
@@ -33,6 +35,7 @@ namespace Mathcalibur.Audio
         [SerializeField, Range(0f, 1f)] private float dragTouchVolume = 0.35f;
         [SerializeField, Range(0f, 1f)] private float releaseTouchVolume = 0.7f;
         private float _defaultMusicVolume = 1f;
+        private float _sfxVolume = 1f;
         private float _lastGeneralTouchSfxTime = -999f;
 
         private void Awake()
@@ -46,7 +49,12 @@ namespace Mathcalibur.Audio
             Instance = this;
             DontDestroyOnLoad(gameObject);
             EnsureSources();
-            _defaultMusicVolume = musicSource != null ? musicSource.volume : 1f;
+            _defaultMusicVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(BgmVolumePrefsKey, 1f));
+            _sfxVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(SfxVolumePrefsKey, 1f));
+            if (musicSource != null)
+            {
+                musicSource.volume = _defaultMusicVolume;
+            }
         }
 
         public void PlayTitleBgm() => PlayMusic(titleBgm);
@@ -77,11 +85,11 @@ namespace Mathcalibur.Audio
             }
 
             _lastGeneralTouchSfxTime = Time.unscaledTime;
-            PlayUiSfx(generalTouchSfx);
+            PlayUiSfx(generalTouchSfx, generalTouchVolume);
         }
 
-        public void PlayDragTouchSfx() => PlayUiSfx(dragTouchSfx);
-        public void PlayReleaseTouchSfx() => PlayUiSfx(releaseTouchSfx);
+        public void PlayDragTouchSfx() => PlayUiSfx(dragTouchSfx, dragTouchVolume);
+        public void PlayReleaseTouchSfx() => PlayUiSfx(releaseTouchSfx, releaseTouchVolume);
         public void PlayStageVictorySfx() => PlayUiSfx(stageVictorySfx);
         public void PlayDefeatSfx() => PlayUiSfx(defeatSfx);
         public void PlayCombatModeSwitchSfx() => PlayUiSfx(combatModeSwitchSfx);
@@ -102,6 +110,26 @@ namespace Mathcalibur.Audio
                     musicSource.volume = _defaultMusicVolume;
                 }
             }
+        }
+
+        public float SfxVolume
+        {
+            get => _sfxVolume;
+            set => _sfxVolume = Mathf.Clamp01(value);
+        }
+
+        public void SetBgmVolume(float volume)
+        {
+            MusicVolume = volume;
+            PlayerPrefs.SetFloat(BgmVolumePrefsKey, _defaultMusicVolume);
+            PlayerPrefs.Save();
+        }
+
+        public void SetSfxVolume(float volume)
+        {
+            SfxVolume = volume;
+            PlayerPrefs.SetFloat(SfxVolumePrefsKey, _sfxVolume);
+            PlayerPrefs.Save();
         }
 
         public void ResetMusicVolume()
@@ -166,11 +194,11 @@ namespace Mathcalibur.Audio
             musicSource.Play();
         }
 
-        private void PlayUiSfx(AudioClip clip)
+        private void PlayUiSfx(AudioClip clip, float volumeScale = 1f)
         {
             EnsureSources();
             if (clip == null || uiSfxSource == null) return;
-            uiSfxSource.PlayOneShot(clip);
+            uiSfxSource.PlayOneShot(clip, Mathf.Clamp01(volumeScale) * _sfxVolume);
         }
 
         private void EnsureSources()
