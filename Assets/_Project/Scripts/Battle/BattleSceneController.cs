@@ -11,7 +11,6 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Mathcalibur.Battle
@@ -66,6 +65,7 @@ namespace Mathcalibur.Battle
         [SerializeField] private TMP_Text enemyAttackInfoText;
         [SerializeField] private TMP_Text turnInfoText;
         [Header("Settings")]
+        [SerializeField] private SettingsPanelController settingsPanelController;
         [SerializeField] private RectTransform settingsPanelRoot;
         [SerializeField] private Image settingsBackgroundImage;
         [SerializeField] private Slider bgmSlider;
@@ -583,6 +583,17 @@ namespace Mathcalibur.Battle
 
         private void BuildSettingsPanel(RectTransform canvasRoot)
         {
+            if (settingsPanelController != null)
+            {
+                settingsPanelController.ConfigureBattleActions(
+                    OnSettingsRetryCurrentStage,
+                    OnSettingsRestartFromBeginning,
+                    OnSettingsReturnToTitle);
+                settingsPanelController.Close();
+                _settingsPanelOpen = false;
+                return;
+            }
+
             if (canvasRoot == null)
             {
                 return;
@@ -961,7 +972,7 @@ namespace Mathcalibur.Battle
 
         private void ReturnToTitleScene()
         {
-            SceneManager.LoadScene("TitleScene");
+            OnMenuButtonPressed();
         }
 
         private void HideSceneBoundStartingUniqueLayout()
@@ -1687,7 +1698,7 @@ namespace Mathcalibur.Battle
 
         public void OpenSettingsPanel()
         {
-            if (settingsPanelRoot == null)
+            if (settingsPanelController == null && settingsPanelRoot == null)
             {
                 return;
             }
@@ -1700,6 +1711,14 @@ namespace Mathcalibur.Battle
 
             CloseBagPanel();
             ClosePercentagePanel();
+
+            if (settingsPanelController != null)
+            {
+                settingsPanelController.Open();
+                _settingsPanelOpen = true;
+                return;
+            }
+
             SyncSettingsVolumeUi();
             RefreshSettingsVibrationUi();
             _settingsPanelOpen = true;
@@ -1816,6 +1835,12 @@ namespace Mathcalibur.Battle
         public void CloseSettingsPanel()
         {
             _settingsPanelOpen = false;
+            if (settingsPanelController != null)
+            {
+                settingsPanelController.Close();
+                return;
+            }
+
             if (settingsPanelRoot != null)
             {
                 settingsPanelRoot.gameObject.SetActive(false);
@@ -1829,7 +1854,7 @@ namespace Mathcalibur.Battle
 
         public void ToggleSettingsPanel()
         {
-            if (_settingsPanelOpen)
+            if (_settingsPanelOpen || (settingsPanelController != null && settingsPanelController.IsOpen))
             {
                 CloseSettingsPanel();
                 return;
@@ -4586,7 +4611,7 @@ namespace Mathcalibur.Battle
             _rerollButton = CreateActionButton(infoRow, "Reroll", new Vector2(0.22f, 0.5f), OnRerollPressed, false, config.ShopMainActionButtonWidth, config.ShopMainActionButtonHeight, config.ShopFontSizeScale);
             SetButtonTextColor(_rerollButton, config.ShopButtonTextColor);
             _rerollText = _rerollButton.GetComponentInChildren<TextMeshProUGUI>();
-            var exitButton = CreateActionButton(bottomRow, "Exit", new Vector2(0.20f, 0.5f), () => SceneManager.LoadScene("TitleScene"), false, config.ShopMainActionButtonWidth, config.ShopMainActionButtonHeight, config.ShopFontSizeScale);
+            var exitButton = CreateActionButton(bottomRow, "Exit", new Vector2(0.20f, 0.5f), ReturnToTitleScene, false, config.ShopMainActionButtonWidth, config.ShopMainActionButtonHeight, config.ShopFontSizeScale);
             SetButtonTextColor(exitButton, config.ShopButtonTextColor);
             _nextStageButton = CreateActionButton(bottomRow, "Next Stage", new Vector2(0.80f, 0.5f), OnNextStagePressed, false, config.ShopMainActionButtonWidth, config.ShopMainActionButtonHeight, config.ShopFontSizeScale);
             SetButtonTextColor(_nextStageButton, config.ShopButtonTextColor);

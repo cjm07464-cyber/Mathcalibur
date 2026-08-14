@@ -48,6 +48,8 @@ namespace Mathcalibur.Title
         [SerializeField] private Sprite nonEasyStartButtonSprite;
 
         [Header("Settings")]
+        [SerializeField] private SettingsPanelController settingsPanelController;
+        [SerializeField] private Button settingsOpenButton;
         [SerializeField] private GameObject settingsPanelRoot;
         [SerializeField] private Button settingsCloseButton;
 
@@ -66,7 +68,7 @@ namespace Mathcalibur.Title
             BindButton(easyButton, () => SelectDifficulty(GameDifficulty.Easy));
             BindButton(normalButton, () => SelectDifficulty(GameDifficulty.Normal));
             BindButton(hardButton, () => SelectDifficulty(GameDifficulty.Hard));
-            BindButton(settingsCloseButton, CloseSettingsPanel);
+            BindSettingsControls();
 
             EnsureStartMenuBlackBackground();
             CacheLevelMenuResponsiveLayout();
@@ -119,8 +121,21 @@ namespace Mathcalibur.Title
             SetLevelPanelVisible(false);
         }
 
+        private void BindSettingsControls()
+        {
+            BindButton(settingsOpenButton, ToggleSettingsPanel);
+            BindButton(settingsCloseButton, CloseSettingsPanel);
+            settingsPanelController?.ConfigureTitleActions();
+        }
+
         public void OpenSettingsPanel()
         {
+            if (settingsPanelController != null)
+            {
+                settingsPanelController.Open();
+                return;
+            }
+
             if (settingsPanelRoot == null)
             {
                 return;
@@ -131,6 +146,12 @@ namespace Mathcalibur.Title
 
         public void CloseSettingsPanel()
         {
+            if (settingsPanelController != null)
+            {
+                settingsPanelController.Close();
+                return;
+            }
+
             if (settingsPanelRoot != null)
             {
                 settingsPanelRoot.SetActive(false);
@@ -139,6 +160,12 @@ namespace Mathcalibur.Title
 
         public void ToggleSettingsPanel()
         {
+            if (settingsPanelController != null)
+            {
+                settingsPanelController.Toggle();
+                return;
+            }
+
             if (settingsPanelRoot != null && settingsPanelRoot.activeInHierarchy)
             {
                 CloseSettingsPanel();
@@ -155,7 +182,8 @@ namespace Mathcalibur.Title
                 return;
             }
 
-            if (settingsPanelRoot != null && settingsPanelRoot.activeInHierarchy)
+            if ((settingsPanelController != null && settingsPanelController.IsOpen) ||
+                (settingsPanelRoot != null && settingsPanelRoot.activeInHierarchy))
             {
                 CloseSettingsPanel();
                 return;
