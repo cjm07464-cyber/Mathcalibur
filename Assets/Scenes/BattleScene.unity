@@ -31830,7 +31830,7 @@ MonoBehaviour:
   stageText: {fileID: 0}
   enemyAttackInfoText: {fileID: 0}
   turnInfoText: {fileID: 0}
-  settingsPanelController: {fileID: 0}
+  settingsPanelController: {fileID: 1419557211}
   settingsPanelRoot: {fileID: 0}
   settingsBackgroundImage: {fileID: 0}
   bgmSlider: {fileID: 0}

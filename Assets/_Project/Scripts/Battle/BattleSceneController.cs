@@ -292,6 +292,7 @@ namespace Mathcalibur.Battle
             {
                 battleAnimationManager = FindAnyObjectByType<BattleAnimationManager>();
             }
+            ResolveSettingsPanelController();
             ResolveUiFont();
             _itemDatabase = ItemDatabase.LoadDefault();
             _runtimeItemInventory = new RuntimeItemInventory();
@@ -335,7 +336,7 @@ namespace Mathcalibur.Battle
                 return;
             }
 
-            if (_playerHp <= 0 || _enemyHp <= 0 || _shopOpen || _startingUniqueSelectionOpen || _activeItemConfirmOpen || _defeatOverlayOpen || _settingsPanelOpen || _isResolvingTurn || IsBagPanelOpen() || IsPercentagePanelOpen())
+            if (_playerHp <= 0 || _enemyHp <= 0 || _shopOpen || _startingUniqueSelectionOpen || _activeItemConfirmOpen || _defeatOverlayOpen || IsSettingsPanelOpen() || _isResolvingTurn || IsBagPanelOpen() || IsPercentagePanelOpen())
             {
                 return;
             }
@@ -565,9 +566,29 @@ namespace Mathcalibur.Battle
                 turnInfoText ??= CreateStatusText("TurnInfoText", _runtimeStatusPanel, 0.10f);
             }
 
-            var settingsButton = CreateActionButton(hudRoot, "Settings", new Vector2(0.86f, 0.94f), ToggleSettingsPanel, false, 180f, 64f, config.ShopFontSizeScale);
-            SetButtonTextColor(settingsButton, config.ShopButtonTextColor);
+            if (settingsPanelController == null || !settingsPanelController.HasOpenButton)
+            {
+                var settingsButton = CreateActionButton(hudRoot, "Settings", new Vector2(0.86f, 0.94f), ToggleSettingsPanel, false, 180f, 64f, config.ShopFontSizeScale);
+                SetButtonTextColor(settingsButton, config.ShopButtonTextColor);
+            }
+
             RefreshConvenienceHud();
+        }
+
+        private void ResolveSettingsPanelController()
+        {
+            if (settingsPanelController != null)
+            {
+                return;
+            }
+
+            settingsPanelController = GetComponent<SettingsPanelController>();
+            if (settingsPanelController != null)
+            {
+                return;
+            }
+
+            settingsPanelController = FindAnyObjectByType<SettingsPanelController>(FindObjectsInactive.Include);
         }
 
         private TMP_Text CreateStatusText(string name, RectTransform parent, float normalizedY)
@@ -583,8 +604,12 @@ namespace Mathcalibur.Battle
 
         private void BuildSettingsPanel(RectTransform canvasRoot)
         {
+            ResolveSettingsPanelController();
+
             if (settingsPanelController != null)
             {
+                settingsPanelController.ConfigureOpenAction(ToggleSettingsPanel);
+                settingsPanelController.ConfigureCloseAction(CloseSettingsPanel);
                 settingsPanelController.ConfigureBattleActions(
                     OnSettingsRetryCurrentStage,
                     OnSettingsRestartFromBeginning,
@@ -1863,9 +1888,14 @@ namespace Mathcalibur.Battle
             OpenSettingsPanel();
         }
 
+        private bool IsSettingsPanelOpen()
+        {
+            return _settingsPanelOpen || (settingsPanelController != null && settingsPanelController.IsOpen);
+        }
+
         private void HandleBackNavigation()
         {
-            if (_settingsPanelOpen)
+            if (IsSettingsPanelOpen())
             {
                 CloseSettingsPanel();
                 return;

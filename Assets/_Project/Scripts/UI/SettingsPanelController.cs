@@ -77,13 +77,17 @@ namespace Mathcalibur.UI
         [Tooltip("게임 방법/튜토리얼 버튼 클릭 시 호출할 이벤트입니다. 필요하면 인스펙터에서 연결하세요.")]
         [SerializeField] private UnityEvent onTutorial;
 
+        private Action _openAction;
+        private Action _closeAction;
         private Action _retryCurrentStageAction;
         private Action _restartFromBeginningAction;
         private Action _returnToTitleAction;
         private Action _tutorialAction;
         private bool _isOpen;
+        private bool _controlsBound;
 
         public bool IsOpen => _isOpen;
+        public bool HasOpenButton => openButton != null;
 
         private void Awake()
         {
@@ -97,18 +101,26 @@ namespace Mathcalibur.UI
             RefreshVibrationUi();
         }
 
+        public void ConfigureOpenAction(Action openAction)
+        {
+            _openAction = openAction;
+        }
+
+        public void ConfigureCloseAction(Action closeAction)
+        {
+            _closeAction = closeAction;
+        }
+
         public void ConfigureBattleActions(Action retryCurrentStage, Action restartFromBeginning, Action returnToTitle)
         {
             _retryCurrentStageAction = retryCurrentStage;
             _restartFromBeginningAction = restartFromBeginning;
             _returnToTitleAction = returnToTitle;
-            BindActionButtons();
         }
 
         public void ConfigureTitleActions(Action tutorial = null)
         {
             _tutorialAction = tutorial;
-            BindActionButtons();
         }
 
         public void Open()
@@ -141,9 +153,15 @@ namespace Mathcalibur.UI
 
         private void BindStaticControls()
         {
-            BindButton(openButton, Toggle);
-            BindButton(closeButton, Close);
-            BindButton(backButton, Close);
+            if (_controlsBound)
+            {
+                return;
+            }
+
+            _controlsBound = true;
+            BindButton(openButton, InvokeOpen);
+            BindButton(closeButton, InvokeClose);
+            BindButton(backButton, InvokeClose);
             BindButton(vibrationButton, ToggleVibration);
             ConfigureSliderVisuals(bgmSlider, bgmFillImage, bgmHandleImage);
             ConfigureSliderVisuals(sfxSlider, sfxFillImage, sfxHandleImage);
@@ -247,30 +265,52 @@ namespace Mathcalibur.UI
             vibrationButtonImage.color = isEnabled ? Color.white : new Color(0.55f, 0.55f, 0.55f, 1f);
         }
 
+        private void InvokeOpen()
+        {
+            if (_openAction != null)
+            {
+                _openAction();
+                return;
+            }
+
+            Toggle();
+        }
+
+        private void InvokeClose()
+        {
+            if (_closeAction != null)
+            {
+                _closeAction();
+                return;
+            }
+
+            Close();
+        }
+
         private void InvokeRetryCurrentStage()
         {
-            Close();
+            InvokeClose();
             _retryCurrentStageAction?.Invoke();
             onRetryCurrentStage?.Invoke();
         }
 
         private void InvokeRestartFromBeginning()
         {
-            Close();
+            InvokeClose();
             _restartFromBeginningAction?.Invoke();
             onRestartFromBeginning?.Invoke();
         }
 
         private void InvokeReturnToTitle()
         {
-            Close();
+            InvokeClose();
             _returnToTitleAction?.Invoke();
             onReturnToTitle?.Invoke();
         }
 
         private void InvokeTutorial()
         {
-            Close();
+            InvokeClose();
             _tutorialAction?.Invoke();
             onTutorial?.Invoke();
         }
