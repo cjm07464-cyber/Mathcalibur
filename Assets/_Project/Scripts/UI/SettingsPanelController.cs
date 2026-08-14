@@ -66,6 +66,8 @@ namespace Mathcalibur.UI
         [Header("7. 타이틀 씬 전용 버튼")]
         [Tooltip("게임 방법/튜토리얼 다시 보기 버튼입니다. 아직 연결할 튜토리얼 기능이 없으면 비워두세요.")]
         [SerializeField] private Button tutorialButton;
+        [Tooltip("임시로 튜토리얼 버튼을 잠급니다. 다시 열려면 체크를 끄세요.")]
+        [SerializeField] private bool tutorialButtonLocked = true;
 
         [Header("8. 추가 이벤트 연결용 - 필요할 때만 사용")]
         [Tooltip("현재 스테이지 재시작 버튼 클릭 시 추가로 호출할 이벤트입니다. 보통은 비워둡니다.")]
@@ -121,6 +123,7 @@ namespace Mathcalibur.UI
         public void ConfigureTitleActions(Action tutorial = null)
         {
             _tutorialAction = tutorial;
+            RefreshTutorialButtonLockState();
         }
 
         public void Open()
@@ -179,6 +182,7 @@ namespace Mathcalibur.UI
             }
 
             BindActionButtons();
+            RefreshTutorialButtonLockState();
         }
 
         private void BindActionButtons()
@@ -186,7 +190,18 @@ namespace Mathcalibur.UI
             BindButton(retryCurrentStageButton, InvokeRetryCurrentStage);
             BindButton(restartFromBeginningButton, InvokeRestartFromBeginning);
             BindButton(returnToTitleButton, InvokeReturnToTitle);
-            BindButton(tutorialButton, InvokeTutorial);
+            if (!tutorialButtonLocked)
+            {
+                BindButton(tutorialButton, InvokeTutorial);
+            }
+        }
+
+        private void RefreshTutorialButtonLockState()
+        {
+            if (tutorialButton != null)
+            {
+                tutorialButton.interactable = !tutorialButtonLocked;
+            }
         }
 
         private void SyncVolumeUi()
@@ -310,6 +325,11 @@ namespace Mathcalibur.UI
 
         private void InvokeTutorial()
         {
+            if (tutorialButtonLocked)
+            {
+                return;
+            }
+
             InvokeClose();
             _tutorialAction?.Invoke();
             onTutorial?.Invoke();

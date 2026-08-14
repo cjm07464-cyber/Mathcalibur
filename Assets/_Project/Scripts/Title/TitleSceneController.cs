@@ -49,6 +49,7 @@ namespace Mathcalibur.Title
 
         [Header("Settings")]
         [SerializeField] private SettingsPanelController settingsPanelController;
+        [SerializeField] private TutorialPanelController tutorialPanelController;
         [SerializeField] private Button settingsOpenButton;
         [SerializeField] private GameObject settingsPanelRoot;
         [SerializeField] private Button settingsCloseButton;
@@ -63,11 +64,12 @@ namespace Mathcalibur.Title
         private void Awake()
         {
             GameAudioManager.Instance?.PlayTitleBgm();
-            BindButton(startGameButton, OpenLevelPanel);
+            BindButton(startGameButton, StartNormalBattleImmediately);
             BindButton(quitGameButton, QuitGame);
             BindButton(easyButton, () => SelectDifficulty(GameDifficulty.Easy));
             BindButton(normalButton, () => SelectDifficulty(GameDifficulty.Normal));
             BindButton(hardButton, () => SelectDifficulty(GameDifficulty.Hard));
+            ResolveTutorialPanelController();
             BindSettingsControls();
 
             EnsureStartMenuBlackBackground();
@@ -80,6 +82,7 @@ namespace Mathcalibur.Title
 
             SetLevelPanelVisible(false);
             CloseSettingsPanel();
+            tutorialPanelController?.Close();
         }
 
         private void Start()
@@ -115,6 +118,13 @@ namespace Mathcalibur.Title
             ApplyLevelMenuResponsiveLayout();
         }
 
+        public void StartNormalBattleImmediately()
+        {
+            ClearPendingDifficultySelection();
+            SetLevelPanelVisible(false);
+            StartBattle(GameDifficulty.Normal);
+        }
+
         public void CloseLevelPanel()
         {
             ClearPendingDifficultySelection();
@@ -125,7 +135,27 @@ namespace Mathcalibur.Title
         {
             BindButton(settingsOpenButton, ToggleSettingsPanel);
             BindButton(settingsCloseButton, CloseSettingsPanel);
-            settingsPanelController?.ConfigureTitleActions();
+            settingsPanelController?.ConfigureTitleActions(OpenTutorialPanel);
+        }
+
+        private void ResolveTutorialPanelController()
+        {
+            if (tutorialPanelController == null)
+            {
+                tutorialPanelController = FindAnyObjectByType<TutorialPanelController>(FindObjectsInactive.Include);
+            }
+        }
+
+        public void OpenTutorialPanel()
+        {
+            ResolveTutorialPanelController();
+            CloseSettingsPanel();
+            tutorialPanelController?.Open();
+        }
+
+        public void CloseTutorialPanel()
+        {
+            tutorialPanelController?.Close();
         }
 
         public void OpenSettingsPanel()
@@ -179,6 +209,12 @@ namespace Mathcalibur.Title
         {
             if (_isTransitioning)
             {
+                return;
+            }
+
+            if (tutorialPanelController != null && tutorialPanelController.IsOpen)
+            {
+                CloseTutorialPanel();
                 return;
             }
 

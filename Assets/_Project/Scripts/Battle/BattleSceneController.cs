@@ -66,6 +66,8 @@ namespace Mathcalibur.Battle
         [SerializeField] private TMP_Text turnInfoText;
         [Header("Settings")]
         [SerializeField] private SettingsPanelController settingsPanelController;
+        [SerializeField] private TutorialPanelController tutorialPanelController;
+        [SerializeField] private bool battleEntryTutorialLocked = true;
         [SerializeField] private RectTransform settingsPanelRoot;
         [SerializeField] private Image settingsBackgroundImage;
         [SerializeField] private Slider bgmSlider;
@@ -192,6 +194,8 @@ namespace Mathcalibur.Battle
         private bool _defeatTransitioning;
         private bool _mobileExitOverlayOpen;
         private bool _settingsPanelOpen;
+        private bool _startingUniqueTutorialShownThisRun;
+        private bool _waitingToShowStartingUniqueAfterTutorial;
         private int? _pendingStartingUniqueSelectionIndex;
         private string _pendingActiveItemId;
         private ShopSelectionContext? _pendingShopSelection;
@@ -293,6 +297,7 @@ namespace Mathcalibur.Battle
                 battleAnimationManager = FindAnyObjectByType<BattleAnimationManager>();
             }
             ResolveSettingsPanelController();
+            ResolveTutorialPanelController();
             ResolveUiFont();
             _itemDatabase = ItemDatabase.LoadDefault();
             _runtimeItemInventory = new RuntimeItemInventory();
@@ -336,7 +341,15 @@ namespace Mathcalibur.Battle
                 return;
             }
 
-            if (_playerHp <= 0 || _enemyHp <= 0 || _shopOpen || _startingUniqueSelectionOpen || _activeItemConfirmOpen || _defeatOverlayOpen || IsSettingsPanelOpen() || _isResolvingTurn || IsBagPanelOpen() || IsPercentagePanelOpen())
+            if (_waitingToShowStartingUniqueAfterTutorial && !ShouldBlockTutorialInputFrame())
+            {
+                _waitingToShowStartingUniqueAfterTutorial = false;
+                EnsureStartingUniqueSelection();
+                CaptureStageStartSnapshotIfReady();
+                TryPlayBattleBgmAfterStartingUniqueSelection();
+            }
+
+            if (_playerHp <= 0 || _enemyHp <= 0 || _shopOpen || _startingUniqueSelectionOpen || _activeItemConfirmOpen || _defeatOverlayOpen || IsSettingsPanelOpen() || ShouldBlockTutorialInputFrame() || _isResolvingTurn || IsBagPanelOpen() || IsPercentagePanelOpen())
             {
                 return;
             }
@@ -553,26 +566,34 @@ namespace Mathcalibur.Battle
                 return;
             }
 
-            if (currentGoldText == null || stageText == null || enemyAttackInfoText == null || turnInfoText == null)
-            {
-                _runtimeStatusPanel = CreateUiPanel("BattleStatusPanel", hudRoot, new Vector2(0.04f, 0.74f), new Vector2(0.58f, 0.94f), Vector2.zero, Vector2.zero);
-                var statusBackground = _runtimeStatusPanel.gameObject.AddComponent<Image>();
-                statusBackground.color = new Color(0f, 0f, 0f, 0.35f);
-                statusBackground.raycastTarget = false;
-
-                currentGoldText ??= CreateStatusText("CurrentGoldText", _runtimeStatusPanel, 0.82f);
-                stageText ??= CreateStatusText("StageText", _runtimeStatusPanel, 0.58f);
-                enemyAttackInfoText ??= CreateStatusText("EnemyAttackInfoText", _runtimeStatusPanel, 0.34f);
-                turnInfoText ??= CreateStatusText("TurnInfoText", _runtimeStatusPanel, 0.10f);
-            }
+            HideConvenienceStatusHud();
 
             if (settingsPanelController == null || !settingsPanelController.HasOpenButton)
             {
                 var settingsButton = CreateActionButton(hudRoot, "Settings", new Vector2(0.86f, 0.94f), ToggleSettingsPanel, false, 180f, 64f, config.ShopFontSizeScale);
                 SetButtonTextColor(settingsButton, config.ShopButtonTextColor);
             }
+        }
 
-            RefreshConvenienceHud();
+        private void HideConvenienceStatusHud()
+        {
+            if (_runtimeStatusPanel != null)
+            {
+                _runtimeStatusPanel.gameObject.SetActive(false);
+            }
+
+            SetTextObjectActive(currentGoldText, false);
+            SetTextObjectActive(stageText, false);
+            SetTextObjectActive(enemyAttackInfoText, false);
+            SetTextObjectActive(turnInfoText, false);
+        }
+
+        private static void SetTextObjectActive(TMP_Text text, bool active)
+        {
+            if (text != null)
+            {
+                text.gameObject.SetActive(active);
+            }
         }
 
         private void ResolveSettingsPanelController()
@@ -591,15 +612,46 @@ namespace Mathcalibur.Battle
             settingsPanelController = FindAnyObjectByType<SettingsPanelController>(FindObjectsInactive.Include);
         }
 
-        private TMP_Text CreateStatusText(string name, RectTransform parent, float normalizedY)
+        private void ResolveTutorialPanelController()
         {
-            var text = CreateText(name, parent, new Vector2(0.04f, normalizedY), 26f, config.ShopFontSizeScale);
-            text.rectTransform.anchorMin = text.rectTransform.anchorMax = new Vector2(0.04f, normalizedY);
-            text.rectTransform.pivot = new Vector2(0f, 0.5f);
-            text.rectTransform.sizeDelta = new Vector2(560f, 44f);
-            text.alignment = TextAlignmentOptions.MidlineLeft;
-            text.color = Color.white;
-            return text;
+            if (tutorialPanelController == null)
+            {
+                tutorialPanelController = FindAnyObjectByType<TutorialPanelController>(FindObjectsInactive.Include);
+            }
+        }
+
+        private bool TryOpenBattleEntryTutorialBeforeStartingUniqueSelection()
+        {
+            if (battleEntryTutorialLocked || _startingUniqueTutorialShownThisRun || _startingUniqueSelectionResolved || _startingUniqueSelectionOpen)
+            {
+                return false;
+            }
+
+            ResolveTutorialPanelController();
+            if (tutorialPanelController == null)
+            {
+                return false;
+            }
+
+            _startingUniqueTutorialShownThisRun = true;
+            tutorialPanelController.Open();
+            if (!tutorialPanelController.IsOpen)
+            {
+                return false;
+            }
+
+            _waitingToShowStartingUniqueAfterTutorial = true;
+            return true;
+        }
+
+        private bool IsTutorialPanelOpen()
+        {
+            return tutorialPanelController != null && tutorialPanelController.IsOpen;
+        }
+
+        private bool ShouldBlockTutorialInputFrame()
+        {
+            return tutorialPanelController != null && (tutorialPanelController.IsOpen || tutorialPanelController.ClosedThisFrame);
         }
 
         private void BuildSettingsPanel(RectTransform canvasRoot)
@@ -1474,6 +1526,8 @@ namespace Mathcalibur.Battle
             _pendingActiveItemId = null;
             _pendingShopSelection = null;
             _dragging = false;
+            _startingUniqueTutorialShownThisRun = false;
+            _waitingToShowStartingUniqueAfterTutorial = false;
             _startingUniqueCandidates.Clear();
             _highestDamageThisRun = 0;
             _stageStartSnapshot = null;
@@ -1898,6 +1952,12 @@ namespace Mathcalibur.Battle
             if (IsSettingsPanelOpen())
             {
                 CloseSettingsPanel();
+                return;
+            }
+
+            if (IsTutorialPanelOpen())
+            {
+                tutorialPanelController.Close();
                 return;
             }
 
@@ -2551,6 +2611,11 @@ namespace Mathcalibur.Battle
             RebuildCachedSpawnWeights();
             RefreshHud(string.Empty, "-");
             _hud.SetMessage($"Stage {_playerState.CurrentStage}: {_currentStage.EnemyName}");
+            if (TryOpenBattleEntryTutorialBeforeStartingUniqueSelection())
+            {
+                return;
+            }
+
             EnsureStartingUniqueSelection();
             CaptureStageStartSnapshotIfReady();
         }
@@ -3739,7 +3804,7 @@ namespace Mathcalibur.Battle
 
         private void TryPlayBattleBgmAfterStartingUniqueSelection()
         {
-            if (_startingUniqueSelectionOpen)
+            if (_startingUniqueSelectionOpen || _waitingToShowStartingUniqueAfterTutorial || IsTutorialPanelOpen())
             {
                 return;
             }
@@ -4455,31 +4520,7 @@ namespace Mathcalibur.Battle
 
         private void RefreshConvenienceHud()
         {
-            if (_playerState == null)
-            {
-                return;
-            }
-
-            if (currentGoldText != null)
-            {
-                currentGoldText.text = $"Gold: {_playerState.Gold}";
-            }
-
-            if (stageText != null)
-            {
-                stageText.text = $"Stage {_playerState.CurrentStage} / {MaxStage}";
-            }
-
-            if (enemyAttackInfoText != null)
-            {
-                var attackCycle = Mathf.Max(1, _currentStage.EnemyAttackCycle);
-                enemyAttackInfoText.text = $"Enemy ATK: {_currentStage.EnemyAttackDamage} / {attackCycle}T";
-            }
-
-            if (turnInfoText != null)
-            {
-                turnInfoText.text = $"Turn: {_validTurnCount} / Enemy Attack In: {GetTurnsUntilEnemyAttack()}";
-            }
+            HideConvenienceStatusHud();
         }
 
         private int GetTurnsUntilEnemyAttack()

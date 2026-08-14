@@ -512,6 +512,17 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 174320780}
   m_CullTransparentMesh: 1
+--- !u!114 &237809774 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7530320231861709669, guid: 916f041e2a42ae148a931594608abfc2, type: 3}
+  m_PrefabInstance: {fileID: 196237623380982713}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &321136508
 GameObject:
   m_ObjectHideFlags: 0
@@ -1121,6 +1132,7 @@ MonoBehaviour:
   easyStartButtonSprite: {fileID: 21300000, guid: c7d14153e3a68da41aaea27ceb62a811, type: 3}
   nonEasyStartButtonSprite: {fileID: 21300000, guid: 0e360cf2c6ab62a41afb6341d6c023c7, type: 3}
   settingsPanelController: {fileID: 0}
+  tutorialPanelController: {fileID: 0}
   settingsOpenButton: {fileID: 0}
   settingsPanelRoot: {fileID: 0}
   settingsCloseButton: {fileID: 0}
@@ -1157,7 +1169,7 @@ MonoBehaviour:
   retryCurrentStageButton: {fileID: 2135199125}
   restartFromBeginningButton: {fileID: 417345677}
   returnToTitleButton: {fileID: 1791445971}
-  tutorialButton: {fileID: 0}
+  tutorialButton: {fileID: 237809774}
   onRetryCurrentStage:
     m_PersistentCalls:
       m_Calls: []
@@ -1632,6 +1644,7 @@ RectTransform:
   - {fileID: 174320781}
   - {fileID: 17209632}
   - {fileID: 780486164}
+  - {fileID: 1709563462}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -2083,6 +2096,96 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!1 &1709563461
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1709563462}
+  - component: {fileID: 1709563464}
+  - component: {fileID: 1709563463}
+  - component: {fileID: 1709563465}
+  m_Layer: 5
+  m_Name: TutorialPanel
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1709563462
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1709563461}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1051716681}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1709563463
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1709563461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.9411765}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1709563464
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1709563461}
+  m_CullTransparentMesh: 1
+--- !u!114 &1709563465
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1709563461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 725b3b1a90ad418d920751299d328268, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Mathcalibur.UI.TutorialPanelController
+  panelRoot: {fileID: 1709563461}
+  pages: []
 --- !u!1 &1771535232
 GameObject:
   m_ObjectHideFlags: 0
