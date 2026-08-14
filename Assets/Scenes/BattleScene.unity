@@ -11805,7 +11805,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &869470970
 RectTransform:
   m_ObjectHideFlags: 0
@@ -25915,7 +25915,6 @@ MonoBehaviour:
     goldText: {fileID: 1135515933}
     rerollButton: {fileID: 1105882768}
     rerollText: {fileID: 747061104}
-    exitButton: {fileID: 942358706}
     nextStageButton: {fileID: 2053008007}
     confirmPanelRoot: {fileID: 1433083030}
     confirmPreviewRoot: {fileID: 1977734029}

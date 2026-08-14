@@ -362,7 +362,6 @@ namespace Mathcalibur.Battle
             [SerializeField] private TMP_Text goldText;
             [SerializeField] private Button rerollButton;
             [SerializeField] private TMP_Text rerollText;
-            [SerializeField] private Button exitButton;
             [SerializeField] private Button nextStageButton;
             [SerializeField] private RectTransform confirmPanelRoot;
             [SerializeField] private RectTransform confirmPreviewRoot;
@@ -379,7 +378,6 @@ namespace Mathcalibur.Battle
             public TMP_Text GoldText => goldText;
             public Button RerollButton => rerollButton;
             public TMP_Text RerollText => rerollText;
-            public Button ExitButton => exitButton;
             public Button NextStageButton => nextStageButton;
             public RectTransform ConfirmPanelRoot => confirmPanelRoot;
             public RectTransform ConfirmPreviewRoot => confirmPreviewRoot;

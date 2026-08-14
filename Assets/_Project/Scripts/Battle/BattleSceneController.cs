@@ -1119,11 +1119,6 @@ namespace Mathcalibur.Battle
                 BindButton(_rerollButton, OnRerollPressed);
             }
 
-            if (layout.ExitButton != null)
-            {
-                BindButton(layout.ExitButton, ReturnToTitleScene);
-            }
-
             if (_nextStageButton != null)
             {
                 BindButton(_nextStageButton, OnNextStagePressed);
@@ -4682,9 +4677,7 @@ namespace Mathcalibur.Battle
             _rerollButton = CreateActionButton(infoRow, "Reroll", new Vector2(0.22f, 0.5f), OnRerollPressed, false, config.ShopMainActionButtonWidth, config.ShopMainActionButtonHeight, config.ShopFontSizeScale);
             SetButtonTextColor(_rerollButton, config.ShopButtonTextColor);
             _rerollText = _rerollButton.GetComponentInChildren<TextMeshProUGUI>();
-            var exitButton = CreateActionButton(bottomRow, "Exit", new Vector2(0.20f, 0.5f), ReturnToTitleScene, false, config.ShopMainActionButtonWidth, config.ShopMainActionButtonHeight, config.ShopFontSizeScale);
-            SetButtonTextColor(exitButton, config.ShopButtonTextColor);
-            _nextStageButton = CreateActionButton(bottomRow, "Next Stage", new Vector2(0.80f, 0.5f), OnNextStagePressed, false, config.ShopMainActionButtonWidth, config.ShopMainActionButtonHeight, config.ShopFontSizeScale);
+            _nextStageButton = CreateActionButton(bottomRow, "Next Stage", new Vector2(0.50f, 0.5f), OnNextStagePressed, false, config.ShopMainActionButtonWidth, config.ShopMainActionButtonHeight, config.ShopFontSizeScale);
             SetButtonTextColor(_nextStageButton, config.ShopButtonTextColor);
             BuildShopConfirmPanel();
             _shopOverlayRoot.gameObject.SetActive(false);
