@@ -41,7 +41,6 @@ namespace Mathcalibur.Battle
             [SerializeField] private string attackTriggerName = "Attack";
             [SerializeField] private string hitTriggerName = "Hit";
             [SerializeField] private string deathTriggerName = string.Empty;
-
             public EnemyType EnemyType => enemyType;
             public GameObject Root => root;
             public Animator Animator => animator;
@@ -49,6 +48,26 @@ namespace Mathcalibur.Battle
             public string AttackTriggerName => attackTriggerName;
             public string HitTriggerName => hitTriggerName;
             public string DeathTriggerName => deathTriggerName;
+        }
+
+        [Serializable]
+        private sealed class UniqueHudSlot
+        {
+            [SerializeField] private Image slotFrameImage;
+            [SerializeField] private Image iconImage;
+
+            public Image SlotFrameImage => slotFrameImage;
+            public Image IconImage => iconImage;
+        }
+
+        [Serializable]
+        private sealed class UniqueIconEntry
+        {
+            [SerializeField] private string itemId;
+            [SerializeField] private Sprite icon;
+
+            public string ItemId => itemId;
+            public Sprite Icon => icon;
         }
 
         [SerializeField] private BattleConfig config;
@@ -93,6 +112,12 @@ namespace Mathcalibur.Battle
         [SerializeField] private Sprite settingsSliderHandleSprite;
         [SerializeField] private Sprite settingsVibrationOnSprite;
         [SerializeField] private Sprite settingsVibrationOffSprite;
+        [Header("Drag Count")]
+        [SerializeField] private TMP_Text dragCountText;
+        [Header("Unique Inventory HUD")]
+        [SerializeField] private UniqueHudSlot[] uniqueHudSlots = Array.Empty<UniqueHudSlot>();
+        [SerializeField] private Sprite uniqueEmptySlotSprite;
+        [SerializeField] private UniqueIconEntry[] uniqueHudIconSprites = Array.Empty<UniqueIconEntry>();
         private BattleTileView[,] _grid;
         private RectTransform _boardRoot;
         private RectTransform _boardContainer;
@@ -215,8 +240,10 @@ namespace Mathcalibur.Battle
         private readonly List<Button> _startingUniqueButtons = new();
         private readonly List<BattleBoardLayoutReference.StartingUniqueLayoutReference.SlotReference> _startingUniqueSlotReferences = new();
         private readonly List<GameObject> _startingUniqueSelectionAuras = new();
+        private readonly List<string> _acquiredUniqueHudItemIds = new();
         private readonly Dictionary<string, UniqueItemPresentationText> _uniqueItemPresentationTexts = new(StringComparer.Ordinal);
         private readonly Dictionary<Image, Vector3> _slotIconBaseScales = new();
+        private readonly HashSet<string> _missingUniqueHudIconWarnings = new(StringComparer.Ordinal);
         private int _lastAutoLineClearDamage;
         private int _leftEdgeNumberLineClearStreak;
         private int _rightEdgeNumberLineClearStreak;
@@ -267,6 +294,10 @@ namespace Mathcalibur.Battle
         private const int OperatorLineClearFixedDamage = 10;
         private const int EdgeNumberLineClearForceThreshold = 3;
         private const int MaxForcedEdgeOperatorsPerRefill = 2;
+        private const int InitialBoardMinLineOperators = 1;
+        private const int InitialBoardMaxLineOperators = 2;
+        private const int OperatorWeightBiasAmount = 5;
+        private const int MaxUniqueInventoryHudSlots = 4;
         private const string Unique1ItemId = "UNIQUE_1_AWAKENED_ONE";
         private const string Unique2ItemId = "UNIQUE_2_PROBABILITY_STRIKE";
         private const string Unique3ItemId = "UNIQUE_3_TRINITY";
@@ -312,8 +343,8 @@ namespace Mathcalibur.Battle
             EnsureUiExists();
             Canvas.ForceUpdateCanvases();
             ResolveBoardLayoutReference();
-            BuildBoard();
-            ResolveAutoLineClears(false);
+            RefreshUniqueInventoryHud();
+            BuildInitialBoard();
             InitBattle();
             TryPlayBattleBgmAfterStartingUniqueSelection();
             ApplyResponsiveScenePositions();
@@ -1561,6 +1592,7 @@ namespace Mathcalibur.Battle
             _playerState = new RuntimePlayerState();
             _stageEnemyOrder = null;
             _runtimeItemInventory = new RuntimeItemInventory();
+            ResetUniqueInventoryHudState();
             _numberWeightModifiers.Clear();
             _operatorWeightModifiers.Clear();
             _currentPlayerMaxHp = config.PlayerMaxHp;
@@ -2157,7 +2189,7 @@ namespace Mathcalibur.Battle
             RefreshPercentageUi();
         }
 
-        private void TogglePercentagePanel()
+        public void TogglePercentagePanel()
         {
             if (_percentagePanelRoot == null)
             {
@@ -2542,6 +2574,167 @@ namespace Mathcalibur.Battle
             }
         }
 
+        private void BuildInitialBoard()
+        {
+            BuildBoard();
+            ResolveAutoLineClears(false);
+            ApplyInitialBoardOperatorLineCorrection();
+        }
+
+        private void ApplyInitialBoardOperatorLineCorrection()
+        {
+            if (_grid == null || config.Columns <= 0 || config.Rows <= 0)
+            {
+                return;
+            }
+
+            var bottomRow = config.Rows - 1;
+            SetInitialBoardTileNumber(0, bottomRow);
+            if (config.Columns > 1)
+            {
+                SetInitialBoardTileNumber(config.Columns - 1, bottomRow);
+            }
+
+            ApplyInitialBoardLineOperatorCorrection(GetInitialBoardColumnPositions(0, bottomRow));
+            if (config.Columns > 1)
+            {
+                ApplyInitialBoardLineOperatorCorrection(GetInitialBoardColumnPositions(config.Columns - 1, bottomRow));
+            }
+
+            ApplyInitialBoardLineOperatorCorrection(GetInitialBoardBottomRowPositions(bottomRow));
+        }
+
+        private List<Vector2Int> GetInitialBoardColumnPositions(int x, int excludedBottomRow)
+        {
+            var positions = new List<Vector2Int>();
+            for (var y = 0; y < excludedBottomRow; y++)
+            {
+                positions.Add(new Vector2Int(x, y));
+            }
+
+            return positions;
+        }
+
+        private List<Vector2Int> GetInitialBoardBottomRowPositions(int bottomRow)
+        {
+            var positions = new List<Vector2Int>();
+            for (var x = 1; x < config.Columns - 1; x++)
+            {
+                positions.Add(new Vector2Int(x, bottomRow));
+            }
+
+            return positions;
+        }
+
+        private void ApplyInitialBoardLineOperatorCorrection(List<Vector2Int> linePositions)
+        {
+            if (linePositions == null || linePositions.Count == 0)
+            {
+                return;
+            }
+
+            var operatorPositions = PickInitialBoardOperatorPositions(linePositions);
+            foreach (var position in linePositions)
+            {
+                if (operatorPositions.Contains(position))
+                {
+                    SetInitialBoardTileOperator(position.x, position.y);
+                }
+                else
+                {
+                    SetInitialBoardTileNumber(position.x, position.y);
+                }
+            }
+        }
+
+        private HashSet<Vector2Int> PickInitialBoardOperatorPositions(List<Vector2Int> linePositions)
+        {
+            var operatorPositions = new HashSet<Vector2Int>();
+            var maxOperatorCount = Mathf.Min(InitialBoardMaxLineOperators, (linePositions.Count + 1) / 2);
+            if (maxOperatorCount <= 0)
+            {
+                return operatorPositions;
+            }
+
+            var operatorCount = UnityEngine.Random.Range(InitialBoardMinLineOperators, maxOperatorCount + 1);
+            if (operatorCount <= 1)
+            {
+                operatorPositions.Add(linePositions[UnityEngine.Random.Range(0, linePositions.Count)]);
+                return operatorPositions;
+            }
+
+            var nonAdjacentPairs = new List<(Vector2Int First, Vector2Int Second)>();
+            for (var i = 0; i < linePositions.Count - 1; i++)
+            {
+                for (var j = i + 1; j < linePositions.Count; j++)
+                {
+                    if (!AreAdjacentBoardPositions(linePositions[i], linePositions[j]))
+                    {
+                        nonAdjacentPairs.Add((linePositions[i], linePositions[j]));
+                    }
+                }
+            }
+
+            if (nonAdjacentPairs.Count == 0)
+            {
+                operatorPositions.Add(linePositions[UnityEngine.Random.Range(0, linePositions.Count)]);
+                return operatorPositions;
+            }
+
+            var pair = nonAdjacentPairs[UnityEngine.Random.Range(0, nonAdjacentPairs.Count)];
+            operatorPositions.Add(pair.First);
+            operatorPositions.Add(pair.Second);
+            return operatorPositions;
+        }
+
+        private static bool AreAdjacentBoardPositions(Vector2Int left, Vector2Int right)
+        {
+            return Mathf.Abs(left.x - right.x) + Mathf.Abs(left.y - right.y) == 1;
+        }
+
+        private void SetInitialBoardTileNumber(int x, int y)
+        {
+            if (!IsValidGridPosition(x, y))
+            {
+                return;
+            }
+
+            var tile = _grid[x, y];
+            if (tile == null)
+            {
+                return;
+            }
+
+            tile.SetNumber(PickNumber());
+            ApplyTileSpriteVisual(tile);
+        }
+
+        private void SetInitialBoardTileOperator(int x, int y)
+        {
+            if (!IsValidGridPosition(x, y))
+            {
+                return;
+            }
+
+            var tile = _grid[x, y];
+            if (tile == null)
+            {
+                return;
+            }
+
+            tile.SetOperator(PickOperator());
+            ApplyTileSpriteVisual(tile);
+        }
+
+        private bool IsValidGridPosition(int x, int y)
+        {
+            return x >= 0
+                && y >= 0
+                && _grid != null
+                && x < _grid.GetLength(0)
+                && y < _grid.GetLength(1);
+        }
+
         private void ResetStageLocalBattleState()
         {
             _dragging = false;
@@ -2552,8 +2745,7 @@ namespace Mathcalibur.Battle
             _unique1TransformReady = false;
             ResetEdgeNumberLineClearCorrection();
             RebuildCachedSpawnWeights();
-            BuildBoard();
-            ResolveAutoLineClears(false);
+            BuildInitialBoard();
             _playerShield = 0;
             RefreshHud(string.Empty, "-");
             _hud.SetMessage(string.Empty);
@@ -3078,8 +3270,9 @@ namespace Mathcalibur.Battle
             var damageAfterShield = 0;
             void ApplyEnemyAttackDamage()
             {
-                damageAfterShield = Mathf.Max(0, _currentStage.EnemyAttackDamage - _playerShield);
-                _playerShield = 0;
+                var enemyAttackDamage = Mathf.Max(0, _currentStage.EnemyAttackDamage);
+                damageAfterShield = Mathf.Max(0, enemyAttackDamage - _playerShield);
+                _playerShield = Mathf.Max(0, _playerShield - enemyAttackDamage);
                 _playerHp = Mathf.Max(0, _playerHp - damageAfterShield);
                 TriggerEnemyAttackCameraShake(damageAfterShield > 0);
                 if (damageAfterShield > 0)
@@ -3098,6 +3291,8 @@ namespace Mathcalibur.Battle
             {
                 ApplyEnemyAttackDamage();
             }
+
+            ResetCombatModeToAttack(true);
 
             if (_playerHp <= 0)
             {
@@ -3191,7 +3386,7 @@ namespace Mathcalibur.Battle
                     baseShield = Mathf.Max(0, Mathf.CeilToInt(baseResult * config.ShieldConversionRate));
                 }
 
-                _playerShield = Mathf.Max(_playerShield, baseShield);
+                _playerShield += baseShield;
                 if (uniqueOutcome.ShieldBonus > 0)
                 {
                     _playerShield += uniqueOutcome.ShieldBonus;
@@ -3781,6 +3976,7 @@ namespace Mathcalibur.Battle
 
             var item = _startingUniqueCandidates[index];
             _itemEffectResolver.ApplyAcquiredItem(item, _runtimeItemInventory, _itemDatabase, this);
+            RegisterUniqueInventoryHudItem(item);
             _startingUniqueSelectionResolved = true;
             _startingUniqueSelectionOpen = false;
             ClearStartingUniqueExplainTexts();
@@ -3850,6 +4046,7 @@ namespace Mathcalibur.Battle
                 NumberWeightModifiers = new Dictionary<int, int>(_numberWeightModifiers),
                 OperatorWeightModifiers = new Dictionary<string, int>(_operatorWeightModifiers, StringComparer.Ordinal),
                 InventorySnapshot = _runtimeItemInventory.CaptureSnapshot(),
+                UniqueHudItemIds = new List<string>(_acquiredUniqueHudItemIds),
             };
         }
 
@@ -3883,9 +4080,172 @@ namespace Mathcalibur.Battle
             }
 
             _runtimeItemInventory.RestoreSnapshot(_stageStartSnapshot.InventorySnapshot);
+            RestoreUniqueInventoryHudState(_stageStartSnapshot.UniqueHudItemIds);
             _startingUniqueSelectionResolved = true;
             RebuildCachedSpawnWeights();
             RefreshBoardTileSpriteVisuals();
+        }
+
+        private void ResetUniqueInventoryHudState()
+        {
+            _acquiredUniqueHudItemIds.Clear();
+            RefreshUniqueInventoryHud();
+        }
+
+        private void RestoreUniqueInventoryHudState(IEnumerable<string> itemIds)
+        {
+            _acquiredUniqueHudItemIds.Clear();
+            if (itemIds != null)
+            {
+                foreach (var itemId in itemIds)
+                {
+                    var normalizedItemId = itemId?.Trim();
+                    if (string.IsNullOrEmpty(normalizedItemId)
+                        || _runtimeItemInventory != null && !_runtimeItemInventory.HasAcquiredItem(normalizedItemId))
+                    {
+                        continue;
+                    }
+
+                    TryAddUniqueInventoryHudItemId(normalizedItemId);
+                }
+            }
+
+            RefreshUniqueInventoryHud();
+        }
+
+        private void RegisterUniqueInventoryHudItem(ItemData item)
+        {
+            if (item == null || item.Category != ItemCategory.UniqueItem)
+            {
+                return;
+            }
+
+            if (TryAddUniqueInventoryHudItemId(item.itemId))
+            {
+                RefreshUniqueInventoryHud();
+            }
+        }
+
+        private bool TryAddUniqueInventoryHudItemId(string itemId)
+        {
+            itemId = itemId?.Trim();
+            if (string.IsNullOrEmpty(itemId)
+                || _acquiredUniqueHudItemIds.Any(existing => string.Equals(existing, itemId, StringComparison.Ordinal))
+                || _acquiredUniqueHudItemIds.Count >= MaxUniqueInventoryHudSlots)
+            {
+                return false;
+            }
+
+            _acquiredUniqueHudItemIds.Add(itemId);
+            return true;
+        }
+
+        private void RefreshUniqueInventoryHud()
+        {
+            var slots = uniqueHudSlots ?? Array.Empty<UniqueHudSlot>();
+            for (var i = 0; i < slots.Length; i++)
+            {
+                ApplyUniqueInventoryHudEmptySlot(slots[i]);
+            }
+
+            var displayCount = Mathf.Min(MaxUniqueInventoryHudSlots, slots.Length, _acquiredUniqueHudItemIds.Count);
+            for (var i = 0; i < displayCount; i++)
+            {
+                var itemId = _acquiredUniqueHudItemIds[i];
+                if (string.IsNullOrWhiteSpace(itemId))
+                {
+                    continue;
+                }
+
+                if (TryGetUniqueInventoryHudIcon(itemId, out var icon))
+                {
+                    ApplyUniqueInventoryHudIcon(slots[i], icon);
+                    continue;
+                }
+
+                WarnMissingUniqueInventoryHudIcon(itemId);
+            }
+        }
+
+        private void ApplyUniqueInventoryHudEmptySlot(UniqueHudSlot slot)
+        {
+            if (slot == null)
+            {
+                return;
+            }
+
+            var slotFrameImage = slot.SlotFrameImage;
+            if (slotFrameImage != null)
+            {
+                if (uniqueEmptySlotSprite != null)
+                {
+                    slotFrameImage.sprite = uniqueEmptySlotSprite;
+                }
+
+                slotFrameImage.enabled = true;
+                var frameColor = slotFrameImage.color;
+                if (frameColor.a <= 0f)
+                {
+                    slotFrameImage.color = new Color(frameColor.r, frameColor.g, frameColor.b, 1f);
+                }
+            }
+
+            var iconImage = slot.IconImage;
+            if (iconImage == null)
+            {
+                return;
+            }
+
+            iconImage.sprite = null;
+            iconImage.enabled = false;
+            iconImage.gameObject.SetActive(false);
+            var iconColor = iconImage.color;
+            iconImage.color = new Color(iconColor.r, iconColor.g, iconColor.b, 0f);
+        }
+
+        private static void ApplyUniqueInventoryHudIcon(UniqueHudSlot slot, Sprite icon)
+        {
+            if (slot?.IconImage == null || icon == null)
+            {
+                return;
+            }
+
+            var iconImage = slot.IconImage;
+            iconImage.gameObject.SetActive(true);
+            iconImage.enabled = true;
+            iconImage.sprite = icon;
+            iconImage.preserveAspect = true;
+            var iconColor = iconImage.color;
+            iconImage.color = new Color(iconColor.r, iconColor.g, iconColor.b, 1f);
+        }
+
+        private bool TryGetUniqueInventoryHudIcon(string itemId, out Sprite icon)
+        {
+            icon = null;
+            var entries = uniqueHudIconSprites ?? Array.Empty<UniqueIconEntry>();
+            for (var i = 0; i < entries.Length; i++)
+            {
+                var entry = entries[i];
+                if (entry == null || !string.Equals(entry.ItemId?.Trim(), itemId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                icon = entry.Icon;
+                return icon != null;
+            }
+
+            return false;
+        }
+
+        private void WarnMissingUniqueInventoryHudIcon(string itemId)
+        {
+            if (string.IsNullOrWhiteSpace(itemId) || !_missingUniqueHudIconWarnings.Add(itemId))
+            {
+                return;
+            }
+
+            Debug.LogWarning($"Unique inventory HUD icon is not assigned for itemId '{itemId}'.");
         }
 
         private static void SetCanvasGroupInteraction(Component target, bool enabled)
@@ -4501,16 +4861,29 @@ namespace Mathcalibur.Battle
 
             _selection.Clear();
         }
+        private void RefreshDragCountDisplay()
+        {
+            if (dragCountText == null)
+            {
+                return;
+            }
 
+            var maxCount = Mathf.Max(0, _currentMaxConnectionLength);
+            var selectedCount = _selection != null ? _selection.Count : 0;
+            var remaining = Mathf.Max(0, maxCount - selectedCount);
+
+            dragCountText.text = remaining.ToString();
+        }
         private void RefreshHud(string expression, string result)
         {
             _hud.SetHp(_playerHp, _playerShield, _enemyHp, _currentStage.EnemyHp);
             var left = _currentStage.EnemyAttackCycle - (_validTurnCount % _currentStage.EnemyAttackCycle);
             _hud.SetCountdown(left);
             _hud.SetExpression(expression);
-            _hud.SetResult(result);
+            _hud.SetResult(string.IsNullOrEmpty(result) || result == "-" ? string.Empty : result);
             _hud.SetValidationStatus(GetCurrentExpressionValidity());
             RefreshConvenienceHud();
+            RefreshDragCountDisplay();
         }
 
         private void RefreshConvenienceHud()
@@ -5634,12 +6007,14 @@ namespace Mathcalibur.Battle
             }
 
             _itemEffectResolver.ApplyAcquiredItem(slot.Item, _runtimeItemInventory, _itemDatabase, this);
+            RegisterUniqueInventoryHudItem(slot.Item);
             RefreshBoardTileSpriteVisuals();
             if (selection.IsFree)
             {
                 _freePurchaseDone = true;
                 slot.IsLocked = true;
                 slot.OverrideLabel = "Selected";
+                LockRemainingFreeShopSlots(selection.Index);
             }
             else
             {
@@ -5651,6 +6026,26 @@ namespace Mathcalibur.Battle
             CloseShopConfirmPanel();
             RefreshShopUi();
             RefreshHud(string.Empty, "-");
+        }
+
+        private void LockRemainingFreeShopSlots(int selectedIndex)
+        {
+            for (var i = 0; i < _freeSlots.Count; i++)
+            {
+                if (i == selectedIndex)
+                {
+                    continue;
+                }
+
+                var freeSlot = _freeSlots[i];
+                if (freeSlot == null)
+                {
+                    continue;
+                }
+
+                freeSlot.IsLocked = true;
+                freeSlot.OverrideLabel = "Locked";
+            }
         }
 
         private HashSet<string> BuildVisibleShopItemIdSet(int excludedPaidSlotIndex)
@@ -6122,6 +6517,7 @@ namespace Mathcalibur.Battle
         {
             if (_stageEnemyOrder != null && _stageEnemyOrder.Length == MaxStage - 1)
             {
+                EnsureOpeningEnemyOrder();
                 return;
             }
 
@@ -6129,13 +6525,7 @@ namespace Mathcalibur.Battle
 
             var firstEnemy = UnityEngine.Random.Range(0, 2) == 0 ? EnemyType.Wolf : EnemyType.Orc;
             _stageEnemyOrder[0] = firstEnemy;
-
-            var firstBlockRemaining = firstEnemy == EnemyType.Wolf
-                ? new[] { EnemyType.Orc, EnemyType.StoneGolem }
-                : new[] { EnemyType.Wolf, EnemyType.StoneGolem };
-            ShuffleEnemyTypes(firstBlockRemaining);
-            _stageEnemyOrder[1] = firstBlockRemaining[0];
-            _stageEnemyOrder[2] = firstBlockRemaining[1];
+            EnsureOpeningEnemyOrder();
 
             for (var blockStart = 3; blockStart < _stageEnemyOrder.Length; blockStart += 3)
             {
@@ -6143,6 +6533,22 @@ namespace Mathcalibur.Battle
                 ShuffleEnemyTypes(block);
                 Array.Copy(block, 0, _stageEnemyOrder, blockStart, block.Length);
             }
+        }
+
+        private void EnsureOpeningEnemyOrder()
+        {
+            if (_stageEnemyOrder == null || _stageEnemyOrder.Length < 3)
+            {
+                return;
+            }
+
+            var firstEnemy = _stageEnemyOrder[0] is EnemyType.Wolf or EnemyType.Orc
+                ? _stageEnemyOrder[0]
+                : UnityEngine.Random.Range(0, 2) == 0 ? EnemyType.Wolf : EnemyType.Orc;
+
+            _stageEnemyOrder[0] = firstEnemy;
+            _stageEnemyOrder[1] = firstEnemy == EnemyType.Wolf ? EnemyType.Orc : EnemyType.Wolf;
+            _stageEnemyOrder[2] = EnemyType.StoneGolem;
         }
 
         private static void ShuffleEnemyTypes(EnemyType[] enemyTypes)
@@ -6201,7 +6607,8 @@ namespace Mathcalibur.Battle
                 };
 
                 var modifier = _operatorWeightModifiers.TryGetValue(symbol, out var delta) ? delta : 0;
-                var finalWeight = Mathf.Max(0, entry.Weight + modifier);
+                var adjustedBaseWeight = Mathf.Max(0, entry.Weight + GetOperatorTypeWeightBias(entry.Value));
+                var finalWeight = Mathf.Max(0, adjustedBaseWeight + modifier);
                 if (_playerState == null || _playerState.CurrentStage < 3)
                 {
                     if (symbol is "x" or "÷")
@@ -6214,6 +6621,18 @@ namespace Mathcalibur.Battle
             }
 
             RefreshPercentageUi();
+        }
+
+        private static int GetOperatorTypeWeightBias(OperatorType operatorType)
+        {
+            return operatorType switch
+            {
+                OperatorType.Add => OperatorWeightBiasAmount,
+                OperatorType.Subtract => -OperatorWeightBiasAmount,
+                OperatorType.Multiply => OperatorWeightBiasAmount,
+                OperatorType.Divide => -OperatorWeightBiasAmount,
+                _ => 0,
+            };
         }
 
         public bool CanUseActiveItem(ItemData item, out string reason)
@@ -6417,6 +6836,7 @@ namespace Mathcalibur.Battle
             public Dictionary<int, int> NumberWeightModifiers = new();
             public Dictionary<string, int> OperatorWeightModifiers = new(StringComparer.Ordinal);
             public RuntimeItemInventory.Snapshot InventorySnapshot;
+            public List<string> UniqueHudItemIds = new();
         }
 
         private sealed class ShopSlotData
@@ -6569,6 +6989,7 @@ namespace Mathcalibur.Battle
                     _ => new EnemyDefinition(EnemyType.Wolf, "울프", 40, 10, 2),
                 };
             }
+
         }
     }
 }
