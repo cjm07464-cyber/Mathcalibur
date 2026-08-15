@@ -18719,10 +18719,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 993884272}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1074330945
 MonoBehaviour:
@@ -20071,10 +20071,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1945389898}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1193761437
 MonoBehaviour:
@@ -32476,6 +32476,35 @@ MonoBehaviour:
   settingsVibrationOnSprite: {fileID: 0}
   settingsVibrationOffSprite: {fileID: 0}
   dragCountText: {fileID: 1987832017}
+  uniqueHudSlots:
+  - slotFrameImage: {fileID: 1078048327}
+    iconImage: {fileID: 1193761437}
+  - slotFrameImage: {fileID: 2111429609}
+    iconImage: {fileID: 1074330945}
+  - slotFrameImage: {fileID: 1502864959}
+    iconImage: {fileID: 2100824717}
+  - slotFrameImage: {fileID: 1014759019}
+    iconImage: {fileID: 1680344319}
+  uniqueEmptySlotSprite: {fileID: 21300000, guid: 3423ba10a826b2f4ba338c3d451b5266, type: 3}
+  uniqueHudIconSprites:
+  - itemId: UNIQUE_1_AWAKENED_ONE
+    icon: {fileID: 21300000, guid: ccfabf8cae3f92a409c76d143ed724d0, type: 3}
+  - itemId: UNIQUE_2_PROBABILITY_STRIKE
+    icon: {fileID: 21300000, guid: ee42ed18d3b1a9845a8abc382c067124, type: 3}
+  - itemId: UNIQUE_3_TRINITY
+    icon: {fileID: 21300000, guid: cd7253576a6c84c4390fc71c96dbcfca, type: 3}
+  - itemId: UNIQUE_4_ORDER_OF_OPERATIONS
+    icon: {fileID: 21300000, guid: f36d63a3991b8214299cf15472464ad4, type: 3}
+  - itemId: UNIQUE_5_SHIELD_NUMBER
+    icon: {fileID: 21300000, guid: 05e58a2deaae3be459737af748e866b5, type: 3}
+  - itemId: UNIQUE_6_FLAT_WEALTH
+    icon: {fileID: 21300000, guid: 4fe03ce5011879a4ca7cdcadaa10b761, type: 3}
+  - itemId: UNIQUE_7_DAVID
+    icon: {fileID: 21300000, guid: 925f41b7cde0b5c408a1866426c31fcd, type: 3}
+  - itemId: UNIQUE_8_PERCENT_WEALTH
+    icon: {fileID: 21300000, guid: 8ffa0e1132316d24b904b25cfe51d501, type: 3}
+  - itemId: UNIQUE_9_ODINS_NINE_TRIALS
+    icon: {fileID: 21300000, guid: 2bf8ba44392ea874c80a58cf4fc2b44e, type: 3}
 --- !u!4 &1419557210
 Transform:
   m_ObjectHideFlags: 0
@@ -36297,10 +36326,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1272331140}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1680344319
 MonoBehaviour:
@@ -39076,10 +39105,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 980992977}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: -0.000030517578, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2100824717
 MonoBehaviour:
