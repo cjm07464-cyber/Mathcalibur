@@ -706,7 +706,7 @@
       "effectType": "BoardGenerationOverride",
       "effectPayload": "aCellNumberRatio: TEMP_UNIQUE_4_A_CELL_NUMBER_RATIO; aCellOperatorRatio: TEMP_UNIQUE_4_A_CELL_OPERATOR_RATIO; bCellNumberRatio: TEMP_UNIQUE_4_B_CELL_NUMBER_RATIO; bCellOperatorRatio: TEMP_UNIQUE_4_B_CELL_OPERATOR_RATIO",
       "unlockStage": 0,
-      "uiDescriptionKo": "보유 중 기본 배치 비율 변경. A셀 숫자/연산자 90%/10%, B셀 10%/90%.",
+      "uiDescriptionKo": "스테이지 시작시 보드의 배열을 체크 무늬로 바꿔줍니다.",
       "implementationNote": "BoardGenerationOverride only. Preserves Layer 2 weights."
     },
     {
@@ -769,10 +769,10 @@
       "priceConfigKey": "TEMP_UNIQUE_ITEM_PRICE",
       "maxAcquisitionsPerRun": 1,
       "effectType": "OdinBoardWideNineTransform",
-      "effectPayload": "triggerTurnInterval: TEMP_UNIQUE_9_TRIGGER_TURN_INTERVAL; maxTransformValue: TEMP_UNIQUE_9_MAX_TRANSFORM_VALUE; targetValue: TEMP_UNIQUE_9_TARGET_VALUE",
+      "effectPayload": "targetValue: TEMP_UNIQUE_9_TARGET_VALUE",
       "unlockStage": 0,
-      "uiDescriptionKo": "3턴마다(유효 수식 기준) 계산 전에 보드 전체의 6 이하 숫자 타일을 9로 변환.",
-      "implementationNote": "BoardStateTransformBeforeCalculation. Unique 9 has priority over Unique 1."
+      "uiDescriptionKo": "1턴 지날 때마다 랜덤한 숫자 타일 1개가 9로 바뀝니다.",
+      "implementationNote": "After each valid turn resolves, randomly transforms one non-9 number tile into a unique 9 tile."
     }
   ]
 }

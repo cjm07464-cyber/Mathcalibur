@@ -1170,6 +1170,7 @@ MonoBehaviour:
   restartFromBeginningButton: {fileID: 417345677}
   returnToTitleButton: {fileID: 1791445971}
   tutorialButton: {fileID: 237809774}
+  tutorialButtonLocked: 1
   onRetryCurrentStage:
     m_PersistentCalls:
       m_Calls: []
@@ -2114,7 +2115,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1709563462
 RectTransform:
   m_ObjectHideFlags: 0

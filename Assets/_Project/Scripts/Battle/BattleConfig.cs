@@ -25,8 +25,17 @@ namespace Mathcalibur.Battle
         [Header("전투")]
         [InspectorName("플레이어 최대 HP")]
         [SerializeField] private int playerMaxHp = 100;
-        [InspectorName("적 기본 HP")]
+        [InspectorName("기존 보스 기준 HP")]
         [SerializeField] private int enemyMaxHp = 100;
+        [Header("몬스터 기본 체력")]
+        [InspectorName("울프 기본 HP")]
+        [SerializeField] private int wolfBaseHp = 40;
+        [InspectorName("오크 기본 HP")]
+        [SerializeField] private int orcBaseHp = 50;
+        [InspectorName("스톤골렘 기본 HP")]
+        [SerializeField] private int stoneGolemBaseHp = 120;
+        [InspectorName("마왕 기본 HP")]
+        [SerializeField] private int demonKingBaseHp = 280;
         [InspectorName("적 공격력")]
         [SerializeField] private int enemyAttackDamage = 20;
         [InspectorName("적 공격 주기(유효 수식 턴)")]
@@ -285,6 +294,20 @@ namespace Mathcalibur.Battle
             new() { Value = 1 }, new() { Value = 2 }, new() { Value = 3 },
             new() { Value = 5 }, new() { Value = 6 }, new() { Value = 9 },
         };
+        [Tooltip("유니크 9 효과로 막 9가 된 순간 잠깐 보여줄 기본 이미지입니다.")]
+        [InspectorName("유니크 9 변환 순간 기본 이미지")]
+        [SerializeField] private Sprite unique9TransformPreviewNormalSprite;
+        [Tooltip("유니크 9 변환 순간 이미지를 보여줄 시간입니다.")]
+        [InspectorName("유니크 9 변환 순간 표시 시간")]
+        [Min(0f)]
+        [SerializeField] private float unique9TransformPreviewSeconds = 0.25f;
+        [Tooltip("유니크 9 효과로 9가 된 타일에 사용할 기본 이미지입니다.")]
+        [InspectorName("유니크 9 변환 9 기본 이미지")]
+        [SerializeField] private Sprite unique9TransformedNineNormalSprite;
+        [Tooltip("유니크 9 효과로 9가 된 타일을 선택했을 때 사용할 이미지입니다. 비워두면 기본 이미지를 사용합니다.")]
+        [InspectorName("유니크 9 변환 9 선택 이미지")]
+        [SerializeField] private Sprite unique9TransformedNineSelectedSprite;
+
         [Tooltip("연산자 타일별 기본/선택 이미지를 Inspector에서 연결합니다.")]
         [SerializeField] private List<OperatorTileSpriteEntry> operatorTileSprites = new()
         {
@@ -304,6 +327,10 @@ namespace Mathcalibur.Battle
         public Color BoardBackgroundSpriteTint => boardBackgroundSpriteTint;
         public int PlayerMaxHp => playerMaxHp;
         public int EnemyMaxHp => enemyMaxHp;
+        public int WolfBaseHp => Mathf.Max(1, wolfBaseHp);
+        public int OrcBaseHp => Mathf.Max(1, orcBaseHp);
+        public int StoneGolemBaseHp => Mathf.Max(1, stoneGolemBaseHp);
+        public int DemonKingBaseHp => Mathf.Max(1, demonKingBaseHp);
         public int EnemyAttackDamage => enemyAttackDamage;
         public int EnemyAttackEveryValidTurns => Mathf.Max(1, enemyAttackEveryValidTurns);
         public float EnemyAttackDelaySeconds => Mathf.Max(0f, enemyAttackDelaySeconds);
@@ -364,6 +391,10 @@ namespace Mathcalibur.Battle
         public IReadOnlyList<WeightedOperator> OperatorWeights => operatorWeights;
         public IReadOnlyList<NumberTileSpriteEntry> NumberTileSprites => numberTileSprites;
         public IReadOnlyList<UniqueNumberTileSpriteEntry> UniqueNumberTileSprites => uniqueNumberTileSprites;
+        public Sprite Unique9TransformPreviewNormalSprite => unique9TransformPreviewNormalSprite;
+        public float Unique9TransformPreviewSeconds => Mathf.Max(0f, unique9TransformPreviewSeconds);
+        public Sprite Unique9TransformedNineNormalSprite => unique9TransformedNineNormalSprite;
+        public Sprite Unique9TransformedNineSelectedSprite => unique9TransformedNineSelectedSprite;
         public IReadOnlyList<OperatorTileSpriteEntry> OperatorTileSprites => operatorTileSprites;
         public bool ShowTileLabelWhenSpriteAssigned => showTileLabelWhenSpriteAssigned;
     }

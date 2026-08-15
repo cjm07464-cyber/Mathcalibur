@@ -19,6 +19,10 @@ MonoBehaviour:
   boardBackgroundSpriteTint: {r: 1, g: 1, b: 1, a: 1}
   playerMaxHp: 100
   enemyMaxHp: 80
+  wolfBaseHp: 40
+  orcBaseHp: 50
+  stoneGolemBaseHp: 80
+  demonKingBaseHp: 280
   enemyAttackDamage: 10
   enemyAttackEveryValidTurns: 3
   enemyAttackDelaySeconds: 0.5
@@ -171,6 +175,10 @@ MonoBehaviour:
   - Value: 9
     NormalSprite: {fileID: 21300000, guid: cc1bf615d34a9b44790be10d7437c466, type: 3}
     SelectedSprite: {fileID: 21300000, guid: 52342a4687fcbd44d81f07d075ab3e50, type: 3}
+  unique9TransformPreviewNormalSprite: {fileID: 21300000, guid: d7e0d00b229679a4cbe44a3aa62fe300, type: 3}
+  unique9TransformPreviewSeconds: 0.5
+  unique9TransformedNineNormalSprite: {fileID: 21300000, guid: b8df447969d18bd41a318743b1fcb41e, type: 3}
+  unique9TransformedNineSelectedSprite: {fileID: 21300000, guid: 6075ff94b62e332408a2c017f51a07c2, type: 3}
   operatorTileSprites:
   - Value: 0
     NormalSprite: {fileID: 21300000, guid: 20bd79441f91f3b4097adf6523423959, type: 3}

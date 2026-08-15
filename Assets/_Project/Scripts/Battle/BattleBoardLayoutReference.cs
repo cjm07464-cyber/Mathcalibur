@@ -95,11 +95,6 @@ namespace Mathcalibur.Battle
                     return null;
                 }
 
-                if (item.Category == ItemCategory.UniqueItem)
-                {
-                    return null;
-                }
-
                 return item.Rarity switch
                 {
                     ItemRarity.Common => commonSprite,

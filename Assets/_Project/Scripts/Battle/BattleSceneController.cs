@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using LitMotion;
+using LitMotion.Extensions;
 using Mathcalibur.Audio;
 using Mathcalibur.Items;
 using Mathcalibur.Title;
@@ -53,9 +55,11 @@ namespace Mathcalibur.Battle
         [Serializable]
         private sealed class UniqueHudSlot
         {
+            [SerializeField] private Button button;
             [SerializeField] private Image slotFrameImage;
             [SerializeField] private Image iconImage;
 
+            public Button Button => button;
             public Image SlotFrameImage => slotFrameImage;
             public Image IconImage => iconImage;
         }
@@ -83,6 +87,25 @@ namespace Mathcalibur.Battle
         [SerializeField] private TMP_Text stageText;
         [SerializeField] private TMP_Text enemyAttackInfoText;
         [SerializeField] private TMP_Text turnInfoText;
+        [Header("Stage UI")]
+        [Tooltip("현재 진행 중인 스테이지를 표시할 TextMeshPro 텍스트입니다. 예: 3스테이지")]
+        [SerializeField] private TMP_Text currentStageDisplayText;
+        [Tooltip("현재 적 공격력 숫자만 표시할 TextMeshPro 텍스트입니다.")]
+        [SerializeField] private TMP_Text enemyAttackDamageValueText;
+        [Tooltip("스테이지/전체 클리어 안내를 띄울 검은 패널 루트입니다.")]
+        [SerializeField] private GameObject stageClearPanelRoot;
+        [Tooltip("스테이지/전체 클리어 안내 문구를 표시할 TextMeshPro 텍스트입니다.")]
+        [SerializeField] private TMP_Text stageClearMessageText;
+        [Tooltip("클리어 안내 패널을 보여주는 시간(초)입니다.")]
+        [Min(0f)]
+        [SerializeField] private float stageClearPanelDisplaySeconds = 1f;
+        [Tooltip("모든 스테이지 클리어 시 검은 배경 이미지 알파가 1까지 올라가는 속도입니다.")]
+        [Min(0.01f)]
+        [SerializeField] private float allStageClearPanelFadeSpeed = 1f;
+        [Tooltip("모든 스테이지 클리어 시 검게 페이드할 패널 Image입니다. 비워두면 Stage Clear Panel Root의 Image를 사용합니다.")]
+        [SerializeField] private Image allStageClearFadeImage;
+        [Tooltip("모든 스테이지 클리어 패널에서 타이틀로 돌아가는 버튼입니다.")]
+        [SerializeField] private Button allStageClearReturnToTitleButton;
         [Header("Settings")]
         [SerializeField] private SettingsPanelController settingsPanelController;
         [SerializeField] private TutorialPanelController tutorialPanelController;
@@ -114,10 +137,40 @@ namespace Mathcalibur.Battle
         [SerializeField] private Sprite settingsVibrationOffSprite;
         [Header("Drag Count")]
         [SerializeField] private TMP_Text dragCountText;
+        [Header("Auto Line Clear Damage UI")]
+        [Tooltip("자동 줄 제거 데미지 표시 패널입니다.")]
+        [SerializeField] private GameObject autoLineClearDamagePanelRoot;
+        [Tooltip("자동 줄 제거 누적 데미지 숫자를 표시할 Text입니다.")]
+        [SerializeField] private TMP_Text autoLineClearDamageText;
+        [Tooltip("자동 줄 제거 데미지 숫자가 초당 몇씩 올라갈지 정합니다.")]
+        [Min(1f)]
+        [SerializeField] private float autoLineClearDamageCountUpSpeed = 60f;
+        [Tooltip("자동 줄 제거 최종 데미지 적용 시 텍스트가 커지는 배율입니다.")]
+        [Min(0f)]
+        [SerializeField] private float autoLineClearDamagePunchScale = 0.25f;
+        [Tooltip("자동 줄 제거 최종 데미지 텍스트 크기 연출 시간입니다.")]
+        [Min(0f)]
+        [SerializeField] private float autoLineClearDamagePunchDuration = 0.25f;
+        [Tooltip("자동 줄 제거 최종 데미지 결과를 화면에 유지하는 시간입니다.")]
+        [Min(0f)]
+        [SerializeField] private float autoLineClearDamageResultDisplaySeconds = 0.5f;
         [Header("Unique Inventory HUD")]
         [SerializeField] private UniqueHudSlot[] uniqueHudSlots = Array.Empty<UniqueHudSlot>();
         [SerializeField] private Sprite uniqueEmptySlotSprite;
         [SerializeField] private UniqueIconEntry[] uniqueHudIconSprites = Array.Empty<UniqueIconEntry>();
+        [Header("Unique HUD Info Panel")]
+        [Tooltip("획득 유니크 아이템 설명창 전체 루트입니다. 직접 만든 패널을 연결하면 자동 생성 대신 사용합니다.")]
+        [SerializeField] private RectTransform uniqueHudInfoPanelRoot;
+        [Tooltip("설명창 뒤 어두운 배경/오버레이 루트입니다. 없으면 panelRoot를 사용합니다.")]
+        [SerializeField] private RectTransform uniqueHudInfoOverlayRoot;
+        [Tooltip("설명창에 표시할 유니크 아이콘 위치입니다. 비워두면 아이콘 프리뷰는 생략됩니다.")]
+        [SerializeField] private RectTransform uniqueHudInfoPreviewRoot;
+        [Tooltip("설명창 아이템 이름 텍스트입니다.")]
+        [SerializeField] private TMP_Text uniqueHudInfoNameText;
+        [Tooltip("설명창 아이템 설명 텍스트입니다.")]
+        [SerializeField] private TMP_Text uniqueHudInfoDescriptionText;
+        [Tooltip("설명창을 닫는 확인 버튼입니다.")]
+        [SerializeField] private Button uniqueHudInfoConfirmButton;
         private BattleTileView[,] _grid;
         private RectTransform _boardRoot;
         private RectTransform _boardContainer;
@@ -132,6 +185,7 @@ namespace Mathcalibur.Battle
         private readonly Dictionary<string, int> _operatorWeightModifiers = new(StringComparer.Ordinal);
         private readonly Dictionary<int, int> _cachedNumberWeights = new();
         private readonly Dictionary<string, int> _cachedOperatorWeights = new(StringComparer.Ordinal);
+        private readonly HashSet<BattleTileView> _unique9TransformedTiles = new();
         private readonly List<Button> _freeButtons = new();
         private readonly List<Button> _paidButtons = new();
         private readonly List<BattleBoardLayoutReference.ItemSlotReference> _freeButtonSlotReferences = new();
@@ -165,6 +219,16 @@ namespace Mathcalibur.Battle
         private RectTransform _defeatOverlayRoot;
         private RectTransform _defeatPanel;
         private RectTransform _defeatBlackBackgroundRoot;
+        private RectTransform _uniqueHudInfoOverlayRoot;
+        private RectTransform _uniqueHudInfoPanel;
+        private RectTransform _uniqueHudInfoPreviewRoot;
+        private Image _stageClearFadeImage;
+        private Color _stageClearFadeImageBaseColor;
+        private bool _stageClearFadeImageBaseColorCaptured;
+        private string _stageClearDefaultMessage = string.Empty;
+        private TMP_Text _uniqueHudInfoTitleText;
+        private TMP_Text _uniqueHudInfoDescriptionText;
+        private GameObject _uniqueHudInfoPreviewInstance;
         private RectTransform _mobileExitOverlayRoot;
         private RectTransform _mobileExitPanel;
         private RectTransform _runtimeStatusPanel;
@@ -219,6 +283,8 @@ namespace Mathcalibur.Battle
         private bool _defeatTransitioning;
         private bool _mobileExitOverlayOpen;
         private bool _settingsPanelOpen;
+        private MotionHandle _autoLineClearDamageCountMotionHandle;
+        private MotionHandle _autoLineClearDamagePunchMotionHandle;
         private bool _startingUniqueTutorialShownThisRun;
         private bool _waitingToShowStartingUniqueAfterTutorial;
         private int? _pendingStartingUniqueSelectionIndex;
@@ -288,7 +354,7 @@ namespace Mathcalibur.Battle
 
         private const string DefaultBattleConfigResourcePath = "BattleConfig";
         private const int MaxAutoLineClearLoops = 10;
-        private const int MaxStage = 10;
+        private const int MaxStage = 6;
         private const float StageClearGoldRewardMultiplier = 1.5f;
         private const float EdgeColumnOperatorChanceMultiplier = 0.5f;
         private const int OperatorLineClearFixedDamage = 10;
@@ -297,7 +363,7 @@ namespace Mathcalibur.Battle
         private const int InitialBoardMinLineOperators = 1;
         private const int InitialBoardMaxLineOperators = 2;
         private const int OperatorWeightBiasAmount = 5;
-        private const int MaxUniqueInventoryHudSlots = 4;
+        private const int FallbackUniqueInventoryHudSlots = 9;
         private const string Unique1ItemId = "UNIQUE_1_AWAKENED_ONE";
         private const string Unique2ItemId = "UNIQUE_2_PROBABILITY_STRIKE";
         private const string Unique3ItemId = "UNIQUE_3_TRINITY";
@@ -307,6 +373,8 @@ namespace Mathcalibur.Battle
         private const string Unique7ItemId = "UNIQUE_7_DAVID";
         private const string Unique8ItemId = "UNIQUE_8_PERCENT_WEALTH";
         private const string Unique9ItemId = "UNIQUE_9_ODINS_NINE_TRIALS";
+        private const string HealingPotionItemId = "ITEM_HEALING_POTION";
+        private const string AttackPotionItemId = "ITEM_ATTACK_POTION";
 
         private const float BagResponsiveOffsetX = -0.015f;
         private const float PercentageResponsiveOffsetX = 0.015f;
@@ -330,6 +398,11 @@ namespace Mathcalibur.Battle
             ResolveSettingsPanelController();
             ResolveTutorialPanelController();
             ResolveUiFont();
+            CaptureStageClearDefaultMessage();
+            BindButton(allStageClearReturnToTitleButton, OnMenuButtonPressed);
+            SetAllStageClearReturnToTitleButtonVisible(false);
+            SetStageClearPanelVisible(false);
+            SetAutoLineClearDamagePanelVisible(false);
             _itemDatabase = ItemDatabase.LoadDefault();
             _runtimeItemInventory = new RuntimeItemInventory();
             LoadUniqueItemPresentationTexts();
@@ -380,7 +453,7 @@ namespace Mathcalibur.Battle
                 TryPlayBattleBgmAfterStartingUniqueSelection();
             }
 
-            if (_playerHp <= 0 || _enemyHp <= 0 || _shopOpen || _startingUniqueSelectionOpen || _activeItemConfirmOpen || _defeatOverlayOpen || IsSettingsPanelOpen() || ShouldBlockTutorialInputFrame() || _isResolvingTurn || IsBagPanelOpen() || IsPercentagePanelOpen())
+            if (_playerHp <= 0 || _enemyHp <= 0 || _shopOpen || _startingUniqueSelectionOpen || _activeItemConfirmOpen || _defeatOverlayOpen || IsUniqueHudInfoPanelOpen() || IsSettingsPanelOpen() || ShouldBlockTutorialInputFrame() || _isResolvingTurn || IsBagPanelOpen() || IsPercentagePanelOpen())
             {
                 return;
             }
@@ -569,6 +642,7 @@ namespace Mathcalibur.Battle
             BindPercentageLayout();
             BuildStartingUniqueSelectionOverlay(canvasRoot);
             BuildShopPanel();
+            BuildUniqueHudInfoOverlay(canvasRoot);
             BuildActiveItemConfirmOverlay(canvasRoot);
             BuildDefeatOverlay(canvasRoot);
             BuildMobileExitOverlay(canvasRoot);
@@ -1994,6 +2068,12 @@ namespace Mathcalibur.Battle
                 return;
             }
 
+            if (IsUniqueHudInfoPanelOpen())
+            {
+                CloseUniqueHudInfoPanel();
+                return;
+            }
+
             if (_pendingShopSelection != null || _shopConfirmPanel != null && _shopConfirmPanel.gameObject.activeInHierarchy)
             {
                 CloseShopConfirmPanel();
@@ -2568,7 +2648,7 @@ namespace Mathcalibur.Battle
                 for (var x = 0; x < config.Columns; x++)
                 {
                     var tile = CreateTile(x, y, layoutMetrics);
-                    SpawnTileValue(tile, x, y);
+                    SpawnInitialBoardTileValue(tile, x, y);
                     _grid[x, y] = tile;
                 }
             }
@@ -2577,6 +2657,11 @@ namespace Mathcalibur.Battle
         private void BuildInitialBoard()
         {
             BuildBoard();
+            if (HasUniqueItem(Unique4ItemId))
+            {
+                return;
+            }
+
             ResolveAutoLineClears(false);
             ApplyInitialBoardOperatorLineCorrection();
         }
@@ -2753,6 +2838,7 @@ namespace Mathcalibur.Battle
 
         private void ClearBoardTiles()
         {
+            _unique9TransformedTiles.Clear();
             if (_grid == null)
             {
                 return;
@@ -2797,6 +2883,7 @@ namespace Mathcalibur.Battle
             _enemyDeathHandledThisStage = false;
             RebuildCachedSpawnWeights();
             RefreshHud(string.Empty, "-");
+            UpdateCurrentStageDisplay();
             _hud.SetMessage($"Stage {_playerState.CurrentStage}: {_currentStage.EnemyName}");
             if (TryOpenBattleEntryTutorialBeforeStartingUniqueSelection())
             {
@@ -2923,6 +3010,12 @@ namespace Mathcalibur.Battle
             {
                 case TileKind.Number:
                     {
+                        if (TryGetUnique9TransformedTileSprites(tile, out var unique9NormalSprite, out var unique9SelectedSprite))
+                        {
+                            tile.ConfigureSprites(unique9NormalSprite, unique9SelectedSprite, config.ShowTileLabelWhenSpriteAssigned);
+                            break;
+                        }
+
                         if (TryGetUnique1ReadyTileSprites(tile.NumberValue, out var unique1ReadySpriteEntry))
                         {
                             tile.ConfigureSprites(unique1ReadySpriteEntry.NormalSprite, unique1ReadySpriteEntry.SelectedSprite, config.ShowTileLabelWhenSpriteAssigned);
@@ -2948,16 +3041,24 @@ namespace Mathcalibur.Battle
             }
         }
 
-        private bool TryGetUnique1ReadyTileSprites(int numberValue, out BattleConfig.NumberTileSpriteEntry spriteEntry)
+        private bool TryGetUnique9TransformedTileSprites(BattleTileView tile, out Sprite normalSprite, out Sprite selectedSprite)
         {
-            spriteEntry = default;
-            if (numberValue != 1 || !_unique1TransformReady || !HasUniqueItem(Unique1ItemId))
+            normalSprite = null;
+            selectedSprite = null;
+            if (tile == null || tile.Kind != TileKind.Number || tile.NumberValue != 9 || !_unique9TransformedTiles.Contains(tile))
             {
                 return false;
             }
 
-            spriteEntry = config.NumberTileSprites.FirstOrDefault(entry => entry.Value == 11);
-            return spriteEntry.Value == 11 && (spriteEntry.NormalSprite != null || spriteEntry.SelectedSprite != null);
+            normalSprite = config.Unique9TransformedNineNormalSprite;
+            selectedSprite = config.Unique9TransformedNineSelectedSprite != null ? config.Unique9TransformedNineSelectedSprite : normalSprite;
+            return normalSprite != null || selectedSprite != null;
+        }
+
+        private bool TryGetUnique1ReadyTileSprites(int numberValue, out BattleConfig.NumberTileSpriteEntry spriteEntry)
+        {
+            spriteEntry = default;
+            return false;
         }
 
         private bool TryGetUniqueNumberTileSprites(int numberValue, out BattleConfig.UniqueNumberTileSpriteEntry spriteEntry)
@@ -2995,6 +3096,26 @@ namespace Mathcalibur.Battle
                     ApplyTileSpriteVisual(_grid[x, y]);
                 }
             }
+        }
+
+        private void SpawnInitialBoardTileValue(BattleTileView tile, int x, int y)
+        {
+            if (HasUniqueItem(Unique4ItemId))
+            {
+                if ((x + y) % 2 == 0)
+                {
+                    tile.SetNumber(PickNumber());
+                }
+                else
+                {
+                    tile.SetOperator(PickOperator());
+                }
+
+                ApplyTileSpriteVisual(tile);
+                return;
+            }
+
+            SpawnTileValue(tile, x, y);
         }
 
         private void SpawnTileValue(BattleTileView tile, int x, int y, bool forceOperator = false)
@@ -3161,22 +3282,7 @@ namespace Mathcalibur.Battle
             }
 
             _validTurnCount++;
-            ApplyUnique9BoardTransformIfNeeded();
             context = BuildSelectionContextFromCurrentBoard();
-
-            var consumedUnique1Ready = _unique1TransformReady;
-            if (_unique1TransformReady)
-            {
-                for (var i = 0; i < context.CalculationNumbers.Count; i++)
-                {
-                    if (context.CalculationNumbers[i] == 1)
-                    {
-                        context.CalculationNumbers[i] = 11;
-                    }
-                }
-                _unique1TransformReady = false;
-                RefreshBoardTileSpriteVisuals();
-            }
 
             if (!TryCalculateExpression(context.CalculationNumbers, context.Operators, out var baseResult, out error))
             {
@@ -3201,7 +3307,7 @@ namespace Mathcalibur.Battle
 
             GameAudioManager.Instance?.PlayExpressionConfirmSfx();
 
-            UpdateUnique1State(context, consumedUnique1Ready);
+            UpdateUnique1State(context);
 
             var resultText = $"{baseResult}";
             var shouldEnemyAttack = _enemyHp > 0 && _validTurnCount % _currentStage.EnemyAttackCycle == 0;
@@ -3218,6 +3324,7 @@ namespace Mathcalibur.Battle
 
             yield return ResolveBoard();
             UpdateHighestDamageThisRun(dealtDamage + _lastAutoLineClearDamage);
+            yield return ApplyUnique9BoardTransformIfNeeded();
 
             RefreshHud(string.Empty, resultText);
             _hud.SetMessage(BuildBoardResolutionMessage(resultMessage));
@@ -3572,19 +3679,9 @@ namespace Mathcalibur.Battle
             return new UniqueOutcome(bonusDamage, shieldBonus, message);
         }
 
-        private void UpdateUnique1State(SelectionContext context, bool consumedReadyState)
+        private void UpdateUnique1State(SelectionContext context)
         {
-            if (!HasUniqueItem(Unique1ItemId))
-            {
-                return;
-            }
-
-            if (consumedReadyState)
-            {
-                return;
-            }
-
-            if (!_itemDatabase.TryGetItem(Unique1ItemId, out var unique1))
+            if (!HasUniqueItem(Unique1ItemId) || !_itemDatabase.TryGetItem(Unique1ItemId, out var unique1))
             {
                 return;
             }
@@ -3594,40 +3691,82 @@ namespace Mathcalibur.Battle
             if (_unique1UsedOneCountThisStage >= _itemDatabase.ResolveEffectInt(unique1, "requiredOneCount"))
             {
                 _unique1UsedOneCountThisStage = 0;
-                _unique1TransformReady = true;
-                RefreshBoardTileSpriteVisuals();
+                ApplyUnique1BoardTransform();
             }
         }
 
-        private void ApplyUnique9BoardTransformIfNeeded()
+        private void ApplyUnique1BoardTransform()
         {
-            if (!HasUniqueItem(Unique9ItemId) || !_itemDatabase.TryGetItem(Unique9ItemId, out var unique9))
+            if (_grid == null)
             {
                 return;
             }
 
-            var triggerTurnInterval = _itemDatabase.ResolveEffectInt(unique9, "triggerTurnInterval");
-            if (triggerTurnInterval <= 0 || _validTurnCount % triggerTurnInterval != 0)
+            for (var x = 0; x < _grid.GetLength(0); x++)
             {
-                return;
+                for (var y = 0; y < _grid.GetLength(1); y++)
+                {
+                    var tile = _grid[x, y];
+                    if (tile == null || tile.Kind != TileKind.Number || tile.NumberValue != 1)
+                    {
+                        continue;
+                    }
+
+                    tile.SetNumber(11);
+                    ApplyTileSpriteVisual(tile);
+                }
+            }
+        }
+
+        private IEnumerator ApplyUnique9BoardTransformIfNeeded()
+        {
+            if (!HasUniqueItem(Unique9ItemId))
+            {
+                yield break;
             }
 
-            var maxTransformValue = _itemDatabase.ResolveEffectInt(unique9, "maxTransformValue");
-            var targetValue = _itemDatabase.ResolveEffectInt(unique9, "targetValue");
+            var numberTiles = new List<BattleTileView>();
             for (var x = 0; x < config.Columns; x++)
             {
                 for (var y = 0; y < config.Rows; y++)
                 {
                     var tile = _grid[x, y];
-                    if (tile == null || tile.Kind != TileKind.Number || tile.NumberValue > maxTransformValue)
+                    if (tile != null && tile.Kind == TileKind.Number && tile.NumberValue != 9)
                     {
-                        continue;
+                        numberTiles.Add(tile);
                     }
-
-                    tile.SetNumber(targetValue);
-                    ApplyTileSpriteVisual(tile);
                 }
             }
+
+            if (numberTiles.Count == 0)
+            {
+                yield break;
+            }
+
+            var selectedTile = numberTiles[UnityEngine.Random.Range(0, numberTiles.Count)];
+            selectedTile.SetNumber(9);
+            yield return ShowUnique9TransformPreview(selectedTile);
+            _unique9TransformedTiles.Add(selectedTile);
+            ApplyTileSpriteVisual(selectedTile);
+        }
+
+        private IEnumerator ShowUnique9TransformPreview(BattleTileView tile)
+        {
+            if (tile == null)
+            {
+                yield break;
+            }
+
+            var normalSprite = config.Unique9TransformPreviewNormalSprite;
+            var hasPreviewSprite = normalSprite != null;
+            var previewSeconds = config.Unique9TransformPreviewSeconds;
+            if (!hasPreviewSprite || previewSeconds <= 0f)
+            {
+                yield break;
+            }
+
+            tile.ConfigureSprites(normalSprite, normalSprite, config.ShowTileLabelWhenSpriteAssigned);
+            yield return new WaitForSeconds(previewSeconds);
         }
 
         private float GetNumberChanceForCell(int x, int y)
@@ -4113,6 +4252,63 @@ namespace Mathcalibur.Battle
             RefreshUniqueInventoryHud();
         }
 
+        private void BuildUniqueHudInfoOverlay(RectTransform canvasRoot)
+        {
+            _uniqueHudInfoOverlayRoot = uniqueHudInfoOverlayRoot != null
+                ? uniqueHudInfoOverlayRoot
+                : uniqueHudInfoPanelRoot != null
+                    ? uniqueHudInfoPanelRoot
+                    : null;
+            _uniqueHudInfoPanel = uniqueHudInfoPanelRoot != null
+                ? uniqueHudInfoPanelRoot
+                : _uniqueHudInfoOverlayRoot;
+            _uniqueHudInfoPreviewRoot = uniqueHudInfoPreviewRoot;
+            _uniqueHudInfoTitleText = uniqueHudInfoNameText;
+            _uniqueHudInfoDescriptionText = uniqueHudInfoDescriptionText;
+
+            if (_uniqueHudInfoOverlayRoot != null || _uniqueHudInfoPanel != null)
+            {
+                BindButton(uniqueHudInfoConfirmButton, CloseUniqueHudInfoPanel);
+                SetUniqueHudInfoVisible(false);
+                return;
+            }
+
+            if (canvasRoot == null)
+            {
+                return;
+            }
+
+            _uniqueHudInfoOverlayRoot = CreateUiPanel("UniqueHudInfoOverlay", canvasRoot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            EnsureDimOverlayVisual(_uniqueHudInfoOverlayRoot, config.ShopConfirmDimColor);
+
+            _uniqueHudInfoPanel = CreateCenteredSquarePanel("UniqueHudInfoPanel", _uniqueHudInfoOverlayRoot, config.ShopConfirmPanelSide);
+            var panelImage = _uniqueHudInfoPanel.gameObject.AddComponent<Image>();
+            ApplyPanelVisual(panelImage, config.ShopConfirmPanelSprite, config.ShopConfirmPanelColor);
+
+            _uniqueHudInfoPreviewRoot = CreateUiPanel("UniqueHudInfoPreviewRoot", _uniqueHudInfoPanel, new Vector2(0.38f, 0.68f), new Vector2(0.62f, 0.88f), Vector2.zero, Vector2.zero);
+
+            _uniqueHudInfoTitleText = CreateText("UniqueHudInfoTitle", _uniqueHudInfoPanel, new Vector2(0.5f, 0.60f), 42f, config.ShopFontSizeScale);
+            _uniqueHudInfoTitleText.rectTransform.anchorMin = _uniqueHudInfoTitleText.rectTransform.anchorMax = new Vector2(0.5f, 0.60f);
+            _uniqueHudInfoTitleText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            _uniqueHudInfoTitleText.rectTransform.sizeDelta = new Vector2(760f, 70f);
+            _uniqueHudInfoTitleText.alignment = TextAlignmentOptions.Center;
+            _uniqueHudInfoTitleText.color = config.ShopPanelTextColor;
+
+            _uniqueHudInfoDescriptionText = CreateText("UniqueHudInfoDescription", _uniqueHudInfoPanel, new Vector2(0.5f, 0.42f), 28f, config.ShopFontSizeScale);
+            _uniqueHudInfoDescriptionText.rectTransform.anchorMin = _uniqueHudInfoDescriptionText.rectTransform.anchorMax = new Vector2(0.5f, 0.42f);
+            _uniqueHudInfoDescriptionText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            _uniqueHudInfoDescriptionText.rectTransform.sizeDelta = new Vector2(760f, 280f);
+            _uniqueHudInfoDescriptionText.alignment = TextAlignmentOptions.TopLeft;
+            _uniqueHudInfoDescriptionText.enableWordWrapping = true;
+            _uniqueHudInfoDescriptionText.overflowMode = TextOverflowModes.Overflow;
+            _uniqueHudInfoDescriptionText.color = config.ShopPanelTextColor;
+
+            var okButton = CreateActionButton(_uniqueHudInfoPanel, "확인", new Vector2(0.5f, 0.10f), CloseUniqueHudInfoPanel, false, config.ShopConfirmActionButtonWidth, config.ShopConfirmActionButtonHeight, config.ShopFontSizeScale);
+            SetButtonTextColor(okButton, config.ShopButtonTextColor);
+
+            SetUniqueHudInfoVisible(false);
+        }
+
         private void RegisterUniqueInventoryHudItem(ItemData item)
         {
             if (item == null || item.Category != ItemCategory.UniqueItem)
@@ -4131,7 +4327,7 @@ namespace Mathcalibur.Battle
             itemId = itemId?.Trim();
             if (string.IsNullOrEmpty(itemId)
                 || _acquiredUniqueHudItemIds.Any(existing => string.Equals(existing, itemId, StringComparison.Ordinal))
-                || _acquiredUniqueHudItemIds.Count >= MaxUniqueInventoryHudSlots)
+                || _acquiredUniqueHudItemIds.Count >= GetUniqueInventoryHudCapacity())
             {
                 return false;
             }
@@ -4140,15 +4336,22 @@ namespace Mathcalibur.Battle
             return true;
         }
 
+        private int GetUniqueInventoryHudCapacity()
+        {
+            var configuredSlotCount = uniqueHudSlots != null ? uniqueHudSlots.Length : 0;
+            return Mathf.Max(0, configuredSlotCount > 0 ? configuredSlotCount : FallbackUniqueInventoryHudSlots);
+        }
+
         private void RefreshUniqueInventoryHud()
         {
             var slots = uniqueHudSlots ?? Array.Empty<UniqueHudSlot>();
             for (var i = 0; i < slots.Length; i++)
             {
                 ApplyUniqueInventoryHudEmptySlot(slots[i]);
+                ConfigureUniqueInventoryHudSlotButton(slots[i], i, false);
             }
 
-            var displayCount = Mathf.Min(MaxUniqueInventoryHudSlots, slots.Length, _acquiredUniqueHudItemIds.Count);
+            var displayCount = Mathf.Min(GetUniqueInventoryHudCapacity(), slots.Length, _acquiredUniqueHudItemIds.Count);
             for (var i = 0; i < displayCount; i++)
             {
                 var itemId = _acquiredUniqueHudItemIds[i];
@@ -4157,6 +4360,7 @@ namespace Mathcalibur.Battle
                     continue;
                 }
 
+                ConfigureUniqueInventoryHudSlotButton(slots[i], i, true);
                 if (TryGetUniqueInventoryHudIcon(itemId, out var icon))
                 {
                     ApplyUniqueInventoryHudIcon(slots[i], icon);
@@ -4222,6 +4426,15 @@ namespace Mathcalibur.Battle
         private bool TryGetUniqueInventoryHudIcon(string itemId, out Sprite icon)
         {
             icon = null;
+            if (_itemDatabase != null && _itemDatabase.TryGetItem(itemId, out var item))
+            {
+                icon = _boardLayoutReference?.ItemCategoryIcons?.GetIcon(item);
+                if (icon != null)
+                {
+                    return true;
+                }
+            }
+
             var entries = uniqueHudIconSprites ?? Array.Empty<UniqueIconEntry>();
             for (var i = 0; i < entries.Length; i++)
             {
@@ -4246,6 +4459,177 @@ namespace Mathcalibur.Battle
             }
 
             Debug.LogWarning($"Unique inventory HUD icon is not assigned for itemId '{itemId}'.");
+        }
+
+        private void ConfigureUniqueInventoryHudSlotButton(UniqueHudSlot slot, int index, bool hasItem)
+        {
+            var button = ResolveUniqueInventoryHudSlotButton(slot);
+            if (button == null)
+            {
+                return;
+            }
+
+            button.enabled = true;
+            button.interactable = hasItem;
+            EnsureUniqueInventoryHudSlotRaycastTarget(slot, button, hasItem);
+            if (hasItem)
+            {
+                var capturedIndex = index;
+                BindButton(button, () => OpenUniqueHudInfoPanel(capturedIndex));
+            }
+            else
+            {
+                BindButton(button, null);
+            }
+        }
+
+        private static void EnsureUniqueInventoryHudSlotRaycastTarget(UniqueHudSlot slot, Button button, bool hasItem)
+        {
+            if (slot == null || button == null)
+            {
+                return;
+            }
+
+            var targetGraphic = button.targetGraphic != null
+                ? button.targetGraphic
+                : slot.SlotFrameImage != null
+                    ? slot.SlotFrameImage
+                    : slot.IconImage;
+            if (targetGraphic != null)
+            {
+                button.targetGraphic = targetGraphic;
+                targetGraphic.raycastTarget = hasItem;
+            }
+
+            if (slot.SlotFrameImage != null)
+            {
+                slot.SlotFrameImage.raycastTarget = hasItem;
+            }
+
+            if (slot.IconImage != null)
+            {
+                slot.IconImage.raycastTarget = false;
+            }
+        }
+
+        private static Button ResolveUniqueInventoryHudSlotButton(UniqueHudSlot slot)
+        {
+            if (slot == null)
+            {
+                return null;
+            }
+
+            if (slot.Button != null)
+            {
+                return slot.Button;
+            }
+
+            var targetObject = slot.SlotFrameImage != null
+                ? slot.SlotFrameImage.gameObject
+                : slot.IconImage != null
+                    ? slot.IconImage.gameObject
+                    : null;
+            if (targetObject == null)
+            {
+                return null;
+            }
+
+            var button = targetObject.GetComponent<Button>();
+            if (button == null)
+            {
+                button = targetObject.AddComponent<Button>();
+            }
+
+            if (button.targetGraphic == null)
+            {
+                button.targetGraphic = targetObject.GetComponent<Graphic>();
+            }
+
+            return button;
+        }
+
+        private bool IsUniqueHudInfoPanelOpen()
+        {
+            return _uniqueHudInfoOverlayRoot != null && _uniqueHudInfoOverlayRoot.gameObject.activeInHierarchy;
+        }
+
+        private void OpenUniqueHudInfoPanel(int uniqueHudSlotIndex)
+        {
+            if (_uniqueHudInfoOverlayRoot == null
+                || uniqueHudSlotIndex < 0
+                || uniqueHudSlotIndex >= _acquiredUniqueHudItemIds.Count)
+            {
+                return;
+            }
+
+            var itemId = _acquiredUniqueHudItemIds[uniqueHudSlotIndex];
+            if (string.IsNullOrWhiteSpace(itemId) || _itemDatabase == null || !_itemDatabase.TryGetItem(itemId, out var item))
+            {
+                return;
+            }
+
+            if (_uniqueHudInfoTitleText != null)
+            {
+                _uniqueHudInfoTitleText.text = item.displayName;
+            }
+
+            if (_uniqueHudInfoDescriptionText != null)
+            {
+                _uniqueHudInfoDescriptionText.text = string.IsNullOrWhiteSpace(item.uiDescriptionKo) ? "설명 없음" : item.uiDescriptionKo;
+            }
+
+            RefreshUniqueHudInfoPreview(itemId);
+            SetUniqueHudInfoVisible(true);
+            (_uniqueHudInfoOverlayRoot != null ? _uniqueHudInfoOverlayRoot : _uniqueHudInfoPanel)?.SetAsLastSibling();
+        }
+
+        private void CloseUniqueHudInfoPanel()
+        {
+            ClearUniqueHudInfoPreview();
+            SetUniqueHudInfoVisible(false);
+        }
+
+        private void SetUniqueHudInfoVisible(bool visible)
+        {
+            if (_uniqueHudInfoOverlayRoot != null)
+            {
+                _uniqueHudInfoOverlayRoot.gameObject.SetActive(visible);
+            }
+            else if (_uniqueHudInfoPanel != null)
+            {
+                _uniqueHudInfoPanel.gameObject.SetActive(visible);
+            }
+        }
+
+        private void RefreshUniqueHudInfoPreview(string itemId)
+        {
+            if (_uniqueHudInfoPreviewRoot == null)
+            {
+                return;
+            }
+
+            ClearUniqueHudInfoPreview();
+            if (!TryGetUniqueInventoryHudIcon(itemId, out var icon) || icon == null)
+            {
+                return;
+            }
+
+            _uniqueHudInfoPreviewInstance = CreateUiPanel("UniqueHudInfoPreviewIcon", _uniqueHudInfoPreviewRoot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject;
+            var iconImage = _uniqueHudInfoPreviewInstance.AddComponent<Image>();
+            iconImage.sprite = icon;
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false;
+        }
+
+        private void ClearUniqueHudInfoPreview()
+        {
+            if (_uniqueHudInfoPreviewInstance == null)
+            {
+                return;
+            }
+
+            Destroy(_uniqueHudInfoPreviewInstance);
+            _uniqueHudInfoPreviewInstance = null;
         }
 
         private static void SetCanvasGroupInteraction(Component target, bool enabled)
@@ -4306,6 +4690,7 @@ namespace Mathcalibur.Battle
         private IEnumerator ResolveBoard()
         {
             _lastAutoLineClearDamage = 0;
+            ResetAutoLineClearDamagePresentation();
             var selectedTiles = _selection.ToList();
             ClearSelectionVisual();
             RemoveTiles(selectedTiles, false);
@@ -4320,6 +4705,7 @@ namespace Mathcalibur.Battle
                 var lineGroups = FindSameTypeLineGroups();
                 if (lineGroups.Count == 0)
                 {
+                    yield return ApplyPendingAutoLineClearDamageRoutine();
                     yield break;
                 }
 
@@ -4338,10 +4724,25 @@ namespace Mathcalibur.Battle
                 }
 
                 var lineTiles = FlattenLineClearGroups(lineGroups);
-                ApplyAutoLineClearDamage(lineGroups);
+                var lineDamages = CalculateAutoLineClearDamages(lineGroups);
+                foreach (var damage in lineDamages)
+                {
+                    if (damage <= 0)
+                    {
+                        continue;
+                    }
+
+                    var previousDamage = _lastAutoLineClearDamage;
+                    _lastAutoLineClearDamage += damage;
+                    yield return AnimateAutoLineClearDamageText(previousDamage, _lastAutoLineClearDamage);
+                }
+
+                TrackEdgeNumberLineClearStreaks(lineGroups);
                 RemoveTiles(lineTiles, false);
                 ApplyGravityAndRefill(true);
             }
+
+            yield return ApplyPendingAutoLineClearDamageRoutine();
         }
 
         private void ResolveAutoLineClears(bool animate)
@@ -4462,53 +4863,149 @@ namespace Mathcalibur.Battle
             }
         }
 
-        private void ApplyAutoLineClearDamage(IEnumerable<LineClearGroup> lineGroups)
+        private List<int> CalculateAutoLineClearDamages(IEnumerable<LineClearGroup> lineGroups)
         {
-            if (_enemyHp <= 0)
-            {
-                return;
-            }
-
-            var countedNumberTiles = new HashSet<BattleTileView>();
-            var damage = 0;
-            var numberValueSum = 0;
+            var damages = new List<int>();
             foreach (var group in lineGroups)
             {
-                if (group == null)
+                var damage = CalculateAutoLineClearDamage(group);
+                if (damage > 0)
+                {
+                    damages.Add(damage);
+                }
+            }
+
+            return damages;
+        }
+
+        private int CalculateAutoLineClearDamage(LineClearGroup group)
+        {
+            if (group == null)
+            {
+                return 0;
+            }
+
+            if (group.Kind == TileKind.Operator)
+            {
+                return OperatorLineClearFixedDamage;
+            }
+
+            var numberValueSum = 0;
+            var numberCount = 0;
+            foreach (var tile in group.Tiles)
+            {
+                if (tile == null || tile.Kind != TileKind.Number)
                 {
                     continue;
                 }
 
-                if (group.Kind == TileKind.Operator)
-                {
-                    damage += OperatorLineClearFixedDamage;
-                    continue;
-                }
-
-                foreach (var tile in group.Tiles)
-                {
-                    if (tile == null || tile.Kind != TileKind.Number || !countedNumberTiles.Add(tile))
-                    {
-                        continue;
-                    }
-
-                    numberValueSum += tile.NumberValue;
-                }
+                numberValueSum += tile.NumberValue;
+                numberCount++;
             }
 
-            if (countedNumberTiles.Count > 0)
+            return numberCount > 0 ? Mathf.CeilToInt(numberValueSum / (float)numberCount) : 0;
+        }
+
+        private IEnumerator ApplyPendingAutoLineClearDamageRoutine()
+        {
+            if (_lastAutoLineClearDamage <= 0 || _enemyHp <= 0)
             {
-                damage += Mathf.RoundToInt(numberValueSum / (float)countedNumberTiles.Count);
+                yield break;
             }
 
-            if (damage <= 0)
+            _enemyHp = Mathf.Max(0, _enemyHp - _lastAutoLineClearDamage);
+            RefreshHud(string.Empty, "-");
+            yield return PlayAutoLineClearDamageFinalPunch();
+            var resultDisplaySeconds = Mathf.Max(0f, autoLineClearDamageResultDisplaySeconds);
+            if (resultDisplaySeconds > 0f)
             {
-                return;
+                yield return new WaitForSeconds(resultDisplaySeconds);
             }
 
-            _lastAutoLineClearDamage += damage;
-            _enemyHp = Mathf.Max(0, _enemyHp - damage);
-            TrackEdgeNumberLineClearStreaks(lineGroups);
+            SetAutoLineClearDamagePanelVisible(false);
+        }
+
+        private IEnumerator AnimateAutoLineClearDamageText(int from, int to)
+        {
+            if (autoLineClearDamageText == null)
+            {
+                yield break;
+            }
+
+            SetAutoLineClearDamagePanelVisible(true);
+            CancelAutoLineClearDamageCountMotion();
+            var delta = Mathf.Abs(to - from);
+            var speed = Mathf.Max(1f, autoLineClearDamageCountUpSpeed);
+            var duration = delta / speed;
+            autoLineClearDamageText.text = from.ToString();
+            if (duration <= 0f)
+            {
+                autoLineClearDamageText.text = to.ToString();
+                yield break;
+            }
+
+            _autoLineClearDamageCountMotionHandle = LMotion.Create((float)from, to, duration)
+                .Bind(value => autoLineClearDamageText.text = Mathf.RoundToInt(value).ToString())
+                .AddTo(this);
+            yield return new WaitForSeconds(duration);
+            autoLineClearDamageText.text = to.ToString();
+        }
+
+        private IEnumerator PlayAutoLineClearDamageFinalPunch()
+        {
+            if (autoLineClearDamageText == null || autoLineClearDamagePunchScale <= 0f || autoLineClearDamagePunchDuration <= 0f)
+            {
+                yield break;
+            }
+
+            CancelAutoLineClearDamagePunchMotion();
+            var rect = autoLineClearDamageText.rectTransform;
+            var baseScale = rect.localScale;
+            _autoLineClearDamagePunchMotionHandle = LMotion.Punch.Create(baseScale, Vector3.one * autoLineClearDamagePunchScale, autoLineClearDamagePunchDuration)
+                .BindToLocalScale(rect)
+                .AddTo(this);
+            yield return new WaitForSeconds(autoLineClearDamagePunchDuration);
+            rect.localScale = baseScale;
+        }
+
+        private void ResetAutoLineClearDamagePresentation()
+        {
+            CancelAutoLineClearDamageCountMotion();
+            CancelAutoLineClearDamagePunchMotion();
+            if (autoLineClearDamageText != null)
+            {
+                autoLineClearDamageText.text = "0";
+            }
+
+            SetAutoLineClearDamagePanelVisible(false);
+        }
+
+        private void SetAutoLineClearDamagePanelVisible(bool visible)
+        {
+            if (autoLineClearDamagePanelRoot != null)
+            {
+                autoLineClearDamagePanelRoot.SetActive(visible);
+            }
+            else if (autoLineClearDamageText != null)
+            {
+                autoLineClearDamageText.gameObject.SetActive(visible);
+            }
+        }
+
+        private void CancelAutoLineClearDamageCountMotion()
+        {
+            if (_autoLineClearDamageCountMotionHandle.IsActive())
+            {
+                _autoLineClearDamageCountMotionHandle.Cancel();
+            }
+        }
+
+        private void CancelAutoLineClearDamagePunchMotion()
+        {
+            if (_autoLineClearDamagePunchMotionHandle.IsActive())
+            {
+                _autoLineClearDamagePunchMotionHandle.Cancel();
+            }
         }
 
         private void TrackEdgeNumberLineClearStreaks(IEnumerable<LineClearGroup> lineGroups)
@@ -4614,6 +5111,7 @@ namespace Mathcalibur.Battle
                     continue;
                 }
 
+                _unique9TransformedTiles.Remove(tile);
                 _grid[tile.X, tile.Y] = null;
                 if (destroyImmediately)
                 {
@@ -4889,6 +5387,24 @@ namespace Mathcalibur.Battle
         private void RefreshConvenienceHud()
         {
             HideConvenienceStatusHud();
+            UpdateCurrentStageDisplay();
+            UpdateEnemyAttackDamageDisplay();
+        }
+
+        private void UpdateCurrentStageDisplay()
+        {
+            if (currentStageDisplayText != null && _playerState != null)
+            {
+                currentStageDisplayText.text = $"{Mathf.Max(1, _playerState.CurrentStage)}스테이지";
+            }
+        }
+
+        private void UpdateEnemyAttackDamageDisplay()
+        {
+            if (enemyAttackDamageValueText != null)
+            {
+                enemyAttackDamageValueText.text = _currentStage.EnemyAttackDamage.ToString();
+            }
         }
 
         private int GetTurnsUntilEnemyAttack()
@@ -4909,9 +5425,10 @@ namespace Mathcalibur.Battle
 
         private void OnStageCleared()
         {
+            RestorePlayerHpToFull();
             var reward = GetStageClearGoldReward();
             _playerState.Gold += reward;
-            RefreshConvenienceHud();
+            RefreshHud(string.Empty, "-");
             if (_playerState.CurrentStage >= MaxStage)
             {
                 _hud.SetMessage("Victory! Demon King defeated.");
@@ -4948,8 +5465,149 @@ namespace Mathcalibur.Battle
             }
 
             GameAudioManager.Instance?.PlayStageVictorySfx();
+            yield return ShowStageClearPanelRoutine(_playerState.CurrentStage >= MaxStage);
             _isResolvingTurn = false;
             OnStageCleared();
+        }
+
+        private IEnumerator ShowStageClearPanelRoutine(bool allStagesCleared)
+        {
+            var hasPresentationTarget = stageClearPanelRoot != null || stageClearMessageText != null;
+            if (!hasPresentationTarget)
+            {
+                yield break;
+            }
+
+            if (allStagesCleared)
+            {
+                if (stageClearMessageText != null)
+                {
+                    stageClearMessageText.text = _stageClearDefaultMessage;
+                }
+
+                SetStageClearPanelFadeImageAlpha(GetStageClearPanelBaseAlpha());
+                SetAllStageClearReturnToTitleButtonVisible(true);
+                SetStageClearPanelVisible(true);
+                yield return FadeStageClearPanelImageAlphaToOne();
+                yield break;
+            }
+
+            if (stageClearMessageText != null)
+            {
+                stageClearMessageText.text = $"{Mathf.Max(1, _playerState.CurrentStage)}스테이지\n클리어";
+            }
+
+            SetStageClearPanelFadeImageAlpha(GetStageClearPanelBaseAlpha());
+            SetAllStageClearReturnToTitleButtonVisible(false);
+            SetStageClearPanelVisible(true);
+
+            var displaySeconds = Mathf.Max(0f, stageClearPanelDisplaySeconds);
+            if (displaySeconds > 0f)
+            {
+                yield return new WaitForSeconds(displaySeconds);
+            }
+
+            SetStageClearPanelVisible(false);
+        }
+
+        private IEnumerator FadeStageClearPanelImageAlphaToOne()
+        {
+            var image = ResolveStageClearFadeImage();
+            if (image == null)
+            {
+                yield break;
+            }
+
+            var speed = Mathf.Max(0.01f, allStageClearPanelFadeSpeed);
+            while (image.color.a < 1f)
+            {
+                SetStageClearPanelFadeImageAlpha(Mathf.MoveTowards(image.color.a, 1f, speed * Time.deltaTime));
+                yield return null;
+            }
+        }
+
+        private void CaptureStageClearDefaultMessage()
+        {
+            _stageClearDefaultMessage = stageClearMessageText != null ? stageClearMessageText.text : string.Empty;
+            CaptureStageClearFadeImageBaseColor();
+        }
+
+        private void SetStageClearPanelFadeImageAlpha(float alpha)
+        {
+            var image = ResolveStageClearFadeImage();
+            if (image == null)
+            {
+                return;
+            }
+
+            var color = image.color;
+            image.color = new Color(color.r, color.g, color.b, Mathf.Clamp01(alpha));
+        }
+
+        private float GetStageClearPanelBaseAlpha()
+        {
+            CaptureStageClearFadeImageBaseColor();
+            return _stageClearFadeImageBaseColorCaptured ? _stageClearFadeImageBaseColor.a : 1f;
+        }
+
+        private Image ResolveStageClearFadeImage()
+        {
+            if (_stageClearFadeImage != null)
+            {
+                return _stageClearFadeImage;
+            }
+
+            _stageClearFadeImage = allStageClearFadeImage != null
+                ? allStageClearFadeImage
+                : stageClearPanelRoot != null
+                    ? stageClearPanelRoot.GetComponent<Image>()
+                    : null;
+            CaptureStageClearFadeImageBaseColor();
+            return _stageClearFadeImage;
+        }
+
+        private void CaptureStageClearFadeImageBaseColor()
+        {
+            if (_stageClearFadeImageBaseColorCaptured)
+            {
+                return;
+            }
+
+            var image = _stageClearFadeImage != null
+                ? _stageClearFadeImage
+                : allStageClearFadeImage != null
+                    ? allStageClearFadeImage
+                    : stageClearPanelRoot != null
+                        ? stageClearPanelRoot.GetComponent<Image>()
+                        : null;
+            if (image == null)
+            {
+                return;
+            }
+
+            _stageClearFadeImage = image;
+            _stageClearFadeImageBaseColor = image.color;
+            _stageClearFadeImageBaseColorCaptured = true;
+        }
+
+        private void SetStageClearPanelVisible(bool visible)
+        {
+            if (stageClearPanelRoot != null)
+            {
+                stageClearPanelRoot.SetActive(visible);
+            }
+            else if (stageClearMessageText != null)
+            {
+                stageClearMessageText.gameObject.SetActive(visible);
+            }
+        }
+
+        private void SetAllStageClearReturnToTitleButtonVisible(bool visible)
+        {
+            if (allStageClearReturnToTitleButton != null)
+            {
+                allStageClearReturnToTitleButton.gameObject.SetActive(visible);
+            }
         }
 
         private int GetStageClearGoldReward()
@@ -5505,7 +6163,9 @@ namespace Mathcalibur.Battle
                 return;
             }
 
-            auraImage.color = Color.white;
+            auraImage.color = item != null && item.Category == ItemCategory.UniqueItem
+                ? Color.red
+                : Color.white;
             auraImage.preserveAspect = true;
         }
 
@@ -5809,14 +6469,7 @@ namespace Mathcalibur.Battle
 
         private bool IsUniqueShop()
         {
-            if (IsEasyDifficulty())
-            {
-                return false;
-            }
-
-            return _playerState.CurrentStage == _itemDatabase.GetIntConfig("TEMP_UNIQUE_SHOP_STAGE_1")
-                || _playerState.CurrentStage == _itemDatabase.GetIntConfig("TEMP_UNIQUE_SHOP_STAGE_2")
-                || _playerState.CurrentStage == _itemDatabase.GetIntConfig("TEMP_UNIQUE_SHOP_STAGE_3");
+            return true;
         }
 
         private static bool IsEasyDifficulty()
@@ -5833,6 +6486,7 @@ namespace Mathcalibur.Battle
         {
             var upcomingStageNumber = GetUpcomingStageNumber();
             var pool = _itemDatabase.Items.Where(item => item.IsValid)
+                .Where(item => !IsRemovedShopPotion(item))
                 .Where(item => requiredRarity == null || item.Rarity == requiredRarity.Value)
                 .Where(item => !excludedIds.Contains(item.itemId))
                 .Where(item => _itemEligibilityChecker.IsEligible(item, slotKind, upcomingStageNumber, _runtimeItemInventory, _itemDatabase, out _))
@@ -5843,6 +6497,13 @@ namespace Mathcalibur.Battle
             }
 
             return pool[UnityEngine.Random.Range(0, pool.Count)];
+        }
+
+        private static bool IsRemovedShopPotion(ItemData item)
+        {
+            return item != null
+                && (string.Equals(item.itemId, HealingPotionItemId, StringComparison.Ordinal)
+                    || string.Equals(item.itemId, AttackPotionItemId, StringComparison.Ordinal));
         }
 
         private ItemData PickRandomEligiblePaidItem(HashSet<string> excludedIds)
@@ -6213,13 +6874,30 @@ namespace Mathcalibur.Battle
             return _itemDatabase.GetIntConfig("TEMP_BASE_REROLL_COST") + _playerState.RerollUsedCountThisRun * _itemDatabase.GetIntConfig("TEMP_REROLL_COST_INCREASE");
         }
 
+        private string GetShopSlotDescriptionText(ItemData item)
+        {
+            if (item == null)
+            {
+                return string.Empty;
+            }
+
+            if (item.Category == ItemCategory.UniqueItem)
+            {
+                var presentation = GetUniqueItemPresentation(item);
+                if (!string.IsNullOrWhiteSpace(presentation?.EffectKo))
+                {
+                    return presentation.EffectKo;
+                }
+            }
+
+            return string.IsNullOrWhiteSpace(item.uiDescriptionKo) ? "설명 없음" : item.uiDescriptionKo;
+        }
+
         private void BindSlotButton(Button button, ShopSlotData slot, bool forceLocked, BattleBoardLayoutReference.ItemSlotReference slotReference = null)
         {
             var label = slot.OverrideLabel;
             var itemName = slot.Item?.displayName ?? "Locked";
-            var description = slot.Item != null
-                ? (string.IsNullOrWhiteSpace(slot.Item.uiDescriptionKo) ? "설명 없음" : slot.Item.uiDescriptionKo)
-                : string.Empty;
+            var description = GetShopSlotDescriptionText(slot.Item);
             var price = slot.Item == null
                 ? string.Empty
                 : slot.IsFree
@@ -6503,14 +7181,14 @@ namespace Mathcalibur.Battle
             if (stage >= MaxStage)
             {
                 return StageDatabase.GetFinalBossStage(
-                    config.EnemyMaxHp,
+                    config.DemonKingBaseHp,
                     config.EnemyAttackDamage,
                     config.EnemyAttackEveryValidTurns);
             }
 
             EnsureEnemyOrderForRun();
             var stageIndex = Mathf.Clamp(stage - 1, 0, _stageEnemyOrder.Length - 1);
-            return StageDatabase.GetStage(stage, _stageEnemyOrder[stageIndex], GetBoardDeckUpgradeCount());
+            return StageDatabase.GetStage(stage, _stageEnemyOrder[stageIndex], GetBoardDeckUpgradeCount(), config);
         }
 
         private void EnsureEnemyOrderForRun()
@@ -6531,7 +7209,8 @@ namespace Mathcalibur.Battle
             {
                 var block = new[] { EnemyType.Wolf, EnemyType.Orc, EnemyType.StoneGolem };
                 ShuffleEnemyTypes(block);
-                Array.Copy(block, 0, _stageEnemyOrder, blockStart, block.Length);
+                var copyCount = Mathf.Min(block.Length, _stageEnemyOrder.Length - blockStart);
+                Array.Copy(block, 0, _stageEnemyOrder, blockStart, copyCount);
             }
         }
 
@@ -6700,6 +7379,11 @@ namespace Mathcalibur.Battle
         public void HealPlayer(int amount)
         {
             _playerHp = Mathf.Min(_currentPlayerMaxHp, _playerHp + amount);
+        }
+
+        private void RestorePlayerHpToFull()
+        {
+            _playerHp = Mathf.Max(0, _currentPlayerMaxHp);
         }
 
         private static RectTransform CreateUiPanel(string name, RectTransform parent, Vector2 min, Vector2 max, Vector2 offsetMin, Vector2 offsetMax)
@@ -6949,11 +7633,9 @@ namespace Mathcalibur.Battle
 
         private static class StageDatabase
         {
-            private const int ExistingFinalBossPlaceholderHpBonus = 180;
-
-            public static StageDefinition GetStage(int stage, EnemyType enemyType, int boardDeckUpgradeCount)
+            public static StageDefinition GetStage(int stage, EnemyType enemyType, int boardDeckUpgradeCount, BattleConfig config)
             {
-                var enemy = GetEnemyDefinition(enemyType);
+                var enemy = GetEnemyDefinition(enemyType, config);
                 var statMultiplier = stage switch
                 {
                     <= 3 => 1f,
@@ -6974,19 +7656,22 @@ namespace Mathcalibur.Battle
                 return new StageDefinition(
                     EnemyType.DemonKing,
                     "Demon King",
-                    placeholderBaseHp + ExistingFinalBossPlaceholderHpBonus,
+                    placeholderBaseHp,
                     placeholderAttackDamage,
                     placeholderAttackCycle);
             }
 
-            private static EnemyDefinition GetEnemyDefinition(EnemyType enemyType)
+            private static EnemyDefinition GetEnemyDefinition(EnemyType enemyType, BattleConfig config)
             {
+                var wolfHp = config != null ? config.WolfBaseHp : 40;
+                var orcHp = config != null ? config.OrcBaseHp : 50;
+                var stoneGolemHp = config != null ? config.StoneGolemBaseHp : 120;
                 return enemyType switch
                 {
-                    EnemyType.Wolf => new EnemyDefinition(EnemyType.Wolf, "울프", 40, 10, 2),
-                    EnemyType.Orc => new EnemyDefinition(EnemyType.Orc, "오크", 50, 10, 3),
-                    EnemyType.StoneGolem => new EnemyDefinition(EnemyType.StoneGolem, "스톤골렘", 120, 25, 5),
-                    _ => new EnemyDefinition(EnemyType.Wolf, "울프", 40, 10, 2),
+                    EnemyType.Wolf => new EnemyDefinition(EnemyType.Wolf, "울프", wolfHp, 10, 2),
+                    EnemyType.Orc => new EnemyDefinition(EnemyType.Orc, "오크", orcHp, 10, 3),
+                    EnemyType.StoneGolem => new EnemyDefinition(EnemyType.StoneGolem, "스톤골렘", stoneGolemHp, 25, 5),
+                    _ => new EnemyDefinition(EnemyType.Wolf, "울프", wolfHp, 10, 2),
                 };
             }
 
