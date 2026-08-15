@@ -17,6 +17,8 @@ namespace Mathcalibur.UI
 
         private readonly List<Image> _resolvedPages = new();
         private int _currentIndex;
+        private int _openedStartIndex;
+        private int _openedEndIndex;
         private int _openedFrame = -1;
         private int _closedFrame = -1;
         private bool _isOpen;
@@ -51,6 +53,16 @@ namespace Mathcalibur.UI
 
         public void Open()
         {
+            OpenRange(0, int.MaxValue);
+        }
+
+        public void OpenPage(int pageIndex)
+        {
+            OpenRange(pageIndex, pageIndex);
+        }
+
+        public void OpenRange(int startIndex, int endIndex)
+        {
             ResolvePages();
             if (_resolvedPages.Count == 0)
             {
@@ -58,7 +70,24 @@ namespace Mathcalibur.UI
                 return;
             }
 
-            _currentIndex = 0;
+            var requestedStartIndex = Mathf.Min(startIndex, endIndex);
+            var requestedEndIndex = Mathf.Max(startIndex, endIndex);
+            if (requestedEndIndex < 0 || requestedStartIndex >= _resolvedPages.Count)
+            {
+                Close();
+                return;
+            }
+
+            var maxIndex = _resolvedPages.Count - 1;
+            _openedStartIndex = Mathf.Clamp(requestedStartIndex, 0, maxIndex);
+            _openedEndIndex = Mathf.Clamp(requestedEndIndex, 0, maxIndex);
+            _currentIndex = FindNextAvailablePageIndex(_openedStartIndex, _openedEndIndex);
+            if (_currentIndex < 0)
+            {
+                Close();
+                return;
+            }
+
             _openedFrame = Time.frameCount;
             _isOpen = true;
             SetPanelActive(true);
@@ -87,8 +116,8 @@ namespace Mathcalibur.UI
             }
 
             GameAudioManager.Instance?.PlayButtonClickSfx();
-            _currentIndex++;
-            if (_currentIndex >= _resolvedPages.Count)
+            _currentIndex = FindNextAvailablePageIndex(_currentIndex + 1, _openedEndIndex);
+            if (_currentIndex < 0)
             {
                 Close();
                 return;
@@ -102,12 +131,13 @@ namespace Mathcalibur.UI
             _resolvedPages.Clear();
             if (pages != null)
             {
-                _resolvedPages.AddRange(pages.Where(page => page != null));
-            }
+                _resolvedPages.AddRange(pages);
+                if (_resolvedPages.Any(page => page != null))
+                {
+                    return;
+                }
 
-            if (_resolvedPages.Count > 0)
-            {
-                return;
+                _resolvedPages.Clear();
             }
 
             var root = ResolvePanelRoot();
@@ -123,6 +153,19 @@ namespace Mathcalibur.UI
                     _resolvedPages.Add(page);
                 }
             }
+        }
+
+        private int FindNextAvailablePageIndex(int startIndex, int endIndex)
+        {
+            for (var i = Mathf.Max(0, startIndex); i <= endIndex && i < _resolvedPages.Count; i++)
+            {
+                if (_resolvedPages[i] != null)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         private void RefreshPageVisibility()

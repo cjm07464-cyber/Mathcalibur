@@ -109,7 +109,10 @@ namespace Mathcalibur.Battle
         [Header("Settings")]
         [SerializeField] private SettingsPanelController settingsPanelController;
         [SerializeField] private TutorialPanelController tutorialPanelController;
-        [SerializeField] private bool battleEntryTutorialLocked = true;
+        [Min(0f)]
+        [SerializeField] private float startingUniqueTutorialDelaySeconds = 0.5f;
+        [Min(0f)]
+        [SerializeField] private float postStartingUniqueBattleTutorialDelaySeconds = 0.3f;
         [SerializeField] private RectTransform settingsPanelRoot;
         [SerializeField] private Image settingsBackgroundImage;
         [SerializeField] private Slider bgmSlider;
@@ -286,6 +289,10 @@ namespace Mathcalibur.Battle
         private MotionHandle _autoLineClearDamageCountMotionHandle;
         private MotionHandle _autoLineClearDamagePunchMotionHandle;
         private bool _startingUniqueTutorialShownThisRun;
+        private bool _postStartingUniqueBattleTutorialShownThisRun;
+        private bool _shopTutorialShownThisRun;
+        private Coroutine _startingUniqueTutorialCoroutine;
+        private Coroutine _postStartingUniqueBattleTutorialCoroutine;
         private bool _waitingToShowStartingUniqueAfterTutorial;
         private int? _pendingStartingUniqueSelectionIndex;
         private string _pendingActiveItemId;
@@ -725,28 +732,143 @@ namespace Mathcalibur.Battle
             }
         }
 
-        private bool TryOpenBattleEntryTutorialBeforeStartingUniqueSelection()
+        private void TryOpenStartingUniqueSelectionTutorial()
         {
-            if (battleEntryTutorialLocked || _startingUniqueTutorialShownThisRun || _startingUniqueSelectionResolved || _startingUniqueSelectionOpen)
+            if (_startingUniqueTutorialShownThisRun
+                || _startingUniqueSelectionResolved
+                || !_startingUniqueSelectionOpen
+                || _startingUniqueConfirmTransitioning
+                || _startingUniqueTutorialCoroutine != null)
             {
-                return false;
+                return;
             }
 
+            _startingUniqueTutorialCoroutine = StartCoroutine(OpenStartingUniqueSelectionTutorialAfterDelay());
+        }
+
+        private void TryOpenPostStartingUniqueBattleTutorial()
+        {
+            if (_postStartingUniqueBattleTutorialShownThisRun
+                || !_startingUniqueSelectionResolved
+                || _startingUniqueSelectionOpen
+                || _postStartingUniqueBattleTutorialCoroutine != null)
+            {
+                return;
+            }
+
+            _postStartingUniqueBattleTutorialCoroutine = StartCoroutine(OpenPostStartingUniqueBattleTutorialAfterDelay());
+        }
+
+        private void TryOpenShopTutorial()
+        {
+            if (_shopTutorialShownThisRun)
+            {
+                return;
+            }
+
+            if (TryOpenTutorialPage(5))
+            {
+                _shopTutorialShownThisRun = true;
+            }
+        }
+
+        private IEnumerator OpenStartingUniqueSelectionTutorialAfterDelay()
+        {
+            var delaySeconds = Mathf.Max(0f, startingUniqueTutorialDelaySeconds);
+            if (delaySeconds > 0f)
+            {
+                yield return new WaitForSeconds(delaySeconds);
+            }
+
+            _startingUniqueTutorialCoroutine = null;
+            if (_startingUniqueTutorialShownThisRun
+                || _startingUniqueSelectionResolved
+                || !_startingUniqueSelectionOpen
+                || _startingUniqueConfirmTransitioning)
+            {
+                yield break;
+            }
+
+            if (TryOpenTutorialPage(0))
+            {
+                _startingUniqueTutorialShownThisRun = true;
+            }
+        }
+
+        private IEnumerator OpenPostStartingUniqueBattleTutorialAfterDelay()
+        {
+            var delaySeconds = Mathf.Max(0f, postStartingUniqueBattleTutorialDelaySeconds);
+            if (delaySeconds > 0f)
+            {
+                yield return new WaitForSeconds(delaySeconds);
+            }
+
+            _postStartingUniqueBattleTutorialCoroutine = null;
+            if (_postStartingUniqueBattleTutorialShownThisRun || !_startingUniqueSelectionResolved || _startingUniqueSelectionOpen)
+            {
+                yield break;
+            }
+
+            if (TryOpenTutorialRange(1, 4))
+            {
+                _postStartingUniqueBattleTutorialShownThisRun = true;
+            }
+        }
+
+        private bool TryOpenTutorialPage(int pageIndex)
+        {
             ResolveTutorialPanelController();
             if (tutorialPanelController == null)
             {
                 return false;
             }
 
-            _startingUniqueTutorialShownThisRun = true;
-            tutorialPanelController.Open();
-            if (!tutorialPanelController.IsOpen)
+            tutorialPanelController.OpenPage(pageIndex);
+            return tutorialPanelController.IsOpen;
+        }
+
+        private bool TryOpenTutorialRange(int startIndex, int endIndex)
+        {
+            ResolveTutorialPanelController();
+            if (tutorialPanelController == null)
             {
                 return false;
             }
 
-            _waitingToShowStartingUniqueAfterTutorial = true;
-            return true;
+            tutorialPanelController.OpenRange(startIndex, endIndex);
+            return tutorialPanelController.IsOpen;
+        }
+
+        private void ResetTutorialRunState()
+        {
+            CancelPendingTutorialCoroutines();
+            _startingUniqueTutorialShownThisRun = false;
+            _postStartingUniqueBattleTutorialShownThisRun = false;
+            _shopTutorialShownThisRun = false;
+            _waitingToShowStartingUniqueAfterTutorial = false;
+        }
+
+        private void CancelPendingTutorialCoroutines()
+        {
+            if (_startingUniqueTutorialCoroutine != null)
+            {
+                StopCoroutine(_startingUniqueTutorialCoroutine);
+                _startingUniqueTutorialCoroutine = null;
+            }
+
+            if (_postStartingUniqueBattleTutorialCoroutine != null)
+            {
+                StopCoroutine(_postStartingUniqueBattleTutorialCoroutine);
+                _postStartingUniqueBattleTutorialCoroutine = null;
+            }
+        }
+
+        private void CloseTutorialPanelIfOpen()
+        {
+            if (tutorialPanelController != null && tutorialPanelController.IsOpen)
+            {
+                tutorialPanelController.Close();
+            }
         }
 
         private bool IsTutorialPanelOpen()
@@ -1626,8 +1748,8 @@ namespace Mathcalibur.Battle
             _pendingActiveItemId = null;
             _pendingShopSelection = null;
             _dragging = false;
-            _startingUniqueTutorialShownThisRun = false;
-            _waitingToShowStartingUniqueAfterTutorial = false;
+            ResetTutorialRunState();
+            CloseTutorialPanelIfOpen();
             _startingUniqueCandidates.Clear();
             _highestDamageThisRun = 0;
             _stageStartSnapshot = null;
@@ -1712,6 +1834,9 @@ namespace Mathcalibur.Battle
             _pendingActiveItemId = null;
             _pendingShopSelection = null;
             _dragging = false;
+            CancelPendingTutorialCoroutines();
+            _waitingToShowStartingUniqueAfterTutorial = false;
+            CloseTutorialPanelIfOpen();
             _startingUniqueCandidates.Clear();
 
             if (_shopOverlayRoot != null)
@@ -2885,12 +3010,8 @@ namespace Mathcalibur.Battle
             RefreshHud(string.Empty, "-");
             UpdateCurrentStageDisplay();
             _hud.SetMessage($"Stage {_playerState.CurrentStage}: {_currentStage.EnemyName}");
-            if (TryOpenBattleEntryTutorialBeforeStartingUniqueSelection())
-            {
-                return;
-            }
-
             EnsureStartingUniqueSelection();
+            TryOpenStartingUniqueSelectionTutorial();
             CaptureStageStartSnapshotIfReady();
         }
 
@@ -4129,6 +4250,7 @@ namespace Mathcalibur.Battle
             InitBattle();
             TryPlayBattleBgmAfterStartingUniqueSelection();
             yield return SceneTransitionFader.Instance.FadeIn(fadeInDuration);
+            TryOpenPostStartingUniqueBattleTutorial();
             _startingUniqueConfirmTransitioning = false;
         }
 
@@ -5662,6 +5784,7 @@ namespace Mathcalibur.Battle
             }
 
             RollShop(true);
+            TryOpenShopTutorial();
         }
 
         private void BuildShopPanel()
