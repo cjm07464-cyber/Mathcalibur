@@ -34165,7 +34165,7 @@ MonoBehaviour:
   autoLineClearDamageCountUpSpeed: 50
   autoLineClearDamagePunchScale: 0.25
   autoLineClearDamagePunchDuration: 0.25
-  autoLineClearDamageResultDisplaySeconds: 0.5
+  autoLineClearDamageResultDisplaySeconds: 1
   uniqueHudSlots:
   - button: {fileID: 1078048329}
     slotFrameImage: {fileID: 1078048327}

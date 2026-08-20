@@ -140,23 +140,23 @@ namespace Mathcalibur.Battle
         [SerializeField] private Sprite settingsVibrationOffSprite;
         [Header("Drag Count")]
         [SerializeField] private TMP_Text dragCountText;
-        [Header("Auto Line Clear Damage UI")]
-        [Tooltip("자동 줄 제거 데미지 표시 패널입니다.")]
+        [Header("Bonus Attack UI")]
+        [Tooltip("보너스 어택(자동 줄 제거 데미지) 표시 패널입니다.")]
         [SerializeField] private GameObject autoLineClearDamagePanelRoot;
-        [Tooltip("자동 줄 제거 누적 데미지 숫자를 표시할 Text입니다.")]
+        [Tooltip("보너스 어택(자동 줄 제거 데미지) 누적 데미지 숫자를 표시할 Text입니다.")]
         [SerializeField] private TMP_Text autoLineClearDamageText;
-        [Tooltip("자동 줄 제거 데미지 숫자가 초당 몇씩 올라갈지 정합니다.")]
+        [Tooltip("보너스 어택 데미지 숫자가 초당 몇씩 올라갈지 정합니다.")]
         [Min(1f)]
         [SerializeField] private float autoLineClearDamageCountUpSpeed = 60f;
-        [Tooltip("자동 줄 제거 최종 데미지 적용 시 텍스트가 커지는 배율입니다.")]
+        [Tooltip("보너스 어택 최종 데미지 적용 시 텍스트가 커지는 배율입니다.")]
         [Min(0f)]
         [SerializeField] private float autoLineClearDamagePunchScale = 0.25f;
-        [Tooltip("자동 줄 제거 최종 데미지 텍스트 크기 연출 시간입니다.")]
+        [Tooltip("보너스 어택 최종 데미지 텍스트 크기 연출 시간입니다.")]
         [Min(0f)]
         [SerializeField] private float autoLineClearDamagePunchDuration = 0.25f;
-        [Tooltip("자동 줄 제거 최종 데미지 결과를 화면에 유지하는 시간입니다.")]
+        [Tooltip("보너스 어택 최종 데미지 결과를 화면에 유지하는 시간입니다. 0이면 즉시 숨깁니다.")]
         [Min(0f)]
-        [SerializeField] private float autoLineClearDamageResultDisplaySeconds = 0.5f;
+        [SerializeField] private float autoLineClearDamageResultDisplaySeconds = 2f;
         [Header("Unique Inventory HUD")]
         [SerializeField] private UniqueHudSlot[] uniqueHudSlots = Array.Empty<UniqueHudSlot>();
         [SerializeField] private Sprite uniqueEmptySlotSprite;
@@ -367,6 +367,7 @@ namespace Mathcalibur.Battle
         private const int OperatorLineClearFixedDamage = 10;
         private const int EdgeNumberLineClearForceThreshold = 3;
         private const int MaxForcedEdgeOperatorsPerRefill = 2;
+        private const int MaxInitialBoardLineClearCorrectionAttempts = 32;
         private const int InitialBoardMinLineOperators = 1;
         private const int InitialBoardMaxLineOperators = 2;
         private const int OperatorWeightBiasAmount = 5;
@@ -2789,6 +2790,7 @@ namespace Mathcalibur.Battle
 
             ResolveAutoLineClears(false);
             ApplyInitialBoardOperatorLineCorrection();
+            EnsureInitialBoardHasNoAutoLineClears();
         }
 
         private void ApplyInitialBoardOperatorLineCorrection()
@@ -2854,6 +2856,53 @@ namespace Mathcalibur.Battle
                 {
                     SetInitialBoardTileNumber(position.x, position.y);
                 }
+            }
+        }
+
+        private void EnsureInitialBoardHasNoAutoLineClears()
+        {
+            if (_grid == null)
+            {
+                return;
+            }
+
+            for (var attempt = 0; attempt < MaxInitialBoardLineClearCorrectionAttempts; attempt++)
+            {
+                var lineGroups = FindSameTypeLineGroups();
+                if (lineGroups.Count == 0)
+                {
+                    return;
+                }
+
+                foreach (var lineGroup in lineGroups)
+                {
+                    BreakInitialBoardLineClearGroup(lineGroup);
+                }
+            }
+
+            Debug.LogWarning("Initial board still has auto line clear candidates after correction attempts.");
+        }
+
+        private void BreakInitialBoardLineClearGroup(LineClearGroup lineGroup)
+        {
+            if (lineGroup == null || lineGroup.Tiles.Count == 0)
+            {
+                return;
+            }
+
+            var tile = lineGroup.Tiles[UnityEngine.Random.Range(0, lineGroup.Tiles.Count)];
+            if (tile == null)
+            {
+                return;
+            }
+
+            if (lineGroup.Kind == TileKind.Number)
+            {
+                SetInitialBoardTileOperator(tile.X, tile.Y);
+            }
+            else
+            {
+                SetInitialBoardTileNumber(tile.X, tile.Y);
             }
         }
 
@@ -3443,6 +3492,17 @@ namespace Mathcalibur.Battle
                 yield return battleAnimationManager.PlayAttackByDamageRoutine(dealtDamage);
             }
 
+            if (_enemyHp <= 0)
+            {
+                _lastAutoLineClearDamage = 0;
+                ResetAutoLineClearDamagePresentation();
+                yield return ResolveSelectedTilesWithoutAutoLineClears();
+                UpdateHighestDamageThisRun(dealtDamage);
+                RefreshHud(string.Empty, "-");
+                yield return HandleEnemyDeathThenStageClear();
+                yield break;
+            }
+
             yield return ResolveBoard();
             UpdateHighestDamageThisRun(dealtDamage + _lastAutoLineClearDamage);
             yield return ApplyUnique9BoardTransformIfNeeded();
@@ -3852,7 +3912,7 @@ namespace Mathcalibur.Battle
                 for (var y = 0; y < config.Rows; y++)
                 {
                     var tile = _grid[x, y];
-                    if (tile != null && tile.Kind == TileKind.Number && tile.NumberValue != 9)
+                    if (CanUnique9TransformTile(tile))
                     {
                         numberTiles.Add(tile);
                     }
@@ -3869,6 +3929,36 @@ namespace Mathcalibur.Battle
             yield return ShowUnique9TransformPreview(selectedTile);
             _unique9TransformedTiles.Add(selectedTile);
             ApplyTileSpriteVisual(selectedTile);
+        }
+
+        private bool CanUnique9TransformTile(BattleTileView tile)
+        {
+            if (tile == null || tile.Kind != TileKind.Number || tile.NumberValue == 9)
+            {
+                return false;
+            }
+
+            return !IsNumberTileChangedByUniqueItem(tile);
+        }
+
+        private bool IsNumberTileChangedByUniqueItem(BattleTileView tile)
+        {
+            if (tile == null || tile.Kind != TileKind.Number)
+            {
+                return false;
+            }
+
+            if (_unique9TransformedTiles.Contains(tile))
+            {
+                return true;
+            }
+
+            if (HasUniqueItem(Unique1ItemId) && (tile.NumberValue == 1 || tile.NumberValue == 11))
+            {
+                return true;
+            }
+
+            return TryGetUniqueNumberTileSprites(tile.NumberValue, out _);
         }
 
         private IEnumerator ShowUnique9TransformPreview(BattleTileView tile)
@@ -4820,6 +4910,20 @@ namespace Mathcalibur.Battle
             yield return ResolveAutoLineClearsDuringGameplay();
         }
 
+        private IEnumerator ResolveSelectedTilesWithoutAutoLineClears()
+        {
+            var selectedTiles = _selection.ToList();
+            ClearSelectionVisual();
+            RemoveTiles(selectedTiles, false);
+            ApplyGravityAndRefill(true);
+
+            var settleDelay = GetBoardAnimationSettleDelay();
+            if (settleDelay > 0f)
+            {
+                yield return new WaitForSeconds(settleDelay);
+            }
+        }
+
         private IEnumerator ResolveAutoLineClearsDuringGameplay()
         {
             for (var loop = 0; loop < MaxAutoLineClearLoops; loop++)
@@ -5032,19 +5136,29 @@ namespace Mathcalibur.Battle
         {
             if (_lastAutoLineClearDamage <= 0 || _enemyHp <= 0)
             {
+                ResetAutoLineClearDamagePresentation();
                 yield break;
             }
 
             _enemyHp = Mathf.Max(0, _enemyHp - _lastAutoLineClearDamage);
             RefreshHud(string.Empty, "-");
-            yield return PlayAutoLineClearDamageFinalPunch();
-            var resultDisplaySeconds = Mathf.Max(0f, autoLineClearDamageResultDisplaySeconds);
-            if (resultDisplaySeconds > 0f)
+
+            if (_enemyHp <= 0)
             {
-                yield return new WaitForSeconds(resultDisplaySeconds);
+                ResetAutoLineClearDamagePresentation();
+                yield break;
             }
 
-            SetAutoLineClearDamagePanelVisible(false);
+            var displayUntilTime = Time.time + Mathf.Max(0f, autoLineClearDamageResultDisplaySeconds);
+            if (displayUntilTime <= Time.time)
+            {
+                ResetAutoLineClearDamagePresentation();
+                yield break;
+            }
+
+            yield return PlayAutoLineClearDamageFinalPunch();
+            yield return WaitForAutoLineClearDamageResultDisplayOrEnemyDeath(displayUntilTime);
+            ResetAutoLineClearDamagePresentation();
         }
 
         private IEnumerator AnimateAutoLineClearDamageText(int from, int to)
@@ -5088,6 +5202,14 @@ namespace Mathcalibur.Battle
                 .AddTo(this);
             yield return new WaitForSeconds(autoLineClearDamagePunchDuration);
             rect.localScale = baseScale;
+        }
+
+        private IEnumerator WaitForAutoLineClearDamageResultDisplayOrEnemyDeath(float displayUntilTime)
+        {
+            while (Time.time < displayUntilTime && _enemyHp > 0)
+            {
+                yield return null;
+            }
         }
 
         private void ResetAutoLineClearDamagePresentation()
@@ -5215,7 +5337,7 @@ namespace Mathcalibur.Battle
                 return baseMessage;
             }
 
-            var autoLineDamageMessage = $"줄 제거 데미지 {_lastAutoLineClearDamage}";
+            var autoLineDamageMessage = $"보너스 어택 데미지 {_lastAutoLineClearDamage}";
             if (string.IsNullOrEmpty(baseMessage))
             {
                 return autoLineDamageMessage;
@@ -5581,6 +5703,7 @@ namespace Mathcalibur.Battle
             }
 
             _enemyDeathHandledThisStage = true;
+            ResetAutoLineClearDamagePresentation();
             if (battleAnimationManager != null)
             {
                 yield return battleAnimationManager.PlayEnemyDeathRoutine();
