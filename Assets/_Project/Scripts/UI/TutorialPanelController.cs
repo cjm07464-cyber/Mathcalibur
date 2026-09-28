@@ -23,7 +23,7 @@ namespace Mathcalibur.UI
         private int _closedFrame = -1;
         private bool _isOpen;
 
-        public bool IsOpen => _isOpen;
+        public bool IsOpen => _isOpen && isActiveAndEnabled && ResolvePanelRootActiveInHierarchy();
         public bool ClosedThisFrame => Time.frameCount == _closedFrame;
 
         private void Awake()
@@ -63,6 +63,12 @@ namespace Mathcalibur.UI
 
         public void OpenRange(int startIndex, int endIndex)
         {
+            if (!isActiveAndEnabled)
+            {
+                _isOpen = false;
+                return;
+            }
+
             ResolvePages();
             if (_resolvedPages.Count == 0)
             {
@@ -182,6 +188,12 @@ namespace Mathcalibur.UI
         private GameObject ResolvePanelRoot()
         {
             return panelRoot != null ? panelRoot : gameObject;
+        }
+
+        private bool ResolvePanelRootActiveInHierarchy()
+        {
+            var root = ResolvePanelRoot();
+            return root != null && root.activeInHierarchy;
         }
 
         private void SetPanelActive(bool active)

@@ -9,6 +9,7 @@ namespace Mathcalibur.Battle
     public enum TileKind { Number, Operator }
     public enum OperatorType { Add, Subtract, Multiply, Divide }
 
+    [RequireComponent(typeof(RectTransform), typeof(CanvasGroup))]
     public class BattleTileView : MonoBehaviour
     {
         [SerializeField] private Image background;

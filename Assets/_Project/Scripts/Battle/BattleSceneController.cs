@@ -145,6 +145,23 @@ namespace Mathcalibur.Battle
         [SerializeField] private GameObject autoLineClearDamagePanelRoot;
         [Tooltip("보너스 어택(자동 줄 제거 데미지) 누적 데미지 숫자를 표시할 Text입니다.")]
         [SerializeField] private TMP_Text autoLineClearDamageText;
+        [Tooltip("보너스 어택 숫자 뒤의 BG Image입니다.")]
+        [SerializeField] private Image autoLineClearDamageBackgroundImage;
+        [Tooltip("보너스 어택이 대기 상태일 때 표시할 BG 이미지입니다.")]
+        [SerializeField] private Sprite autoLineClearDamageInactiveBackgroundSprite;
+        [Tooltip("라인이 BG로 흡수되거나 보너스 어택이 표시될 때의 BG 이미지입니다.")]
+        [SerializeField] private Sprite autoLineClearDamageActiveBackgroundSprite;
+        [Tooltip("타일 하나가 BG로 흡수되는 시간입니다.")]
+        [Min(0f)]
+        [SerializeField] private float autoLineClearAbsorbDuration = 0.25f;
+        [Tooltip("각 라인에서 다음 타일이 흡수를 시작하기까지의 간격입니다.")]
+        [Min(0f)]
+        [SerializeField] private float autoLineClearAbsorbStartInterval = 0.06f;
+        [Tooltip("보너스 어택 BG가 최종적으로 흡수될 적 체력 UI 위치입니다.")]
+        [SerializeField] private RectTransform autoLineClearDamageImpactTarget;
+        [Tooltip("보너스 어택 BG가 적 체력 UI까지 이동하는 시간입니다.")]
+        [Min(0f)]
+        [SerializeField] private float autoLineClearDamageImpactDuration = 0.2f;
         [Tooltip("보너스 어택 데미지 숫자가 초당 몇씩 올라갈지 정합니다.")]
         [Min(1f)]
         [SerializeField] private float autoLineClearDamageCountUpSpeed = 60f;
@@ -288,6 +305,7 @@ namespace Mathcalibur.Battle
         private bool _settingsPanelOpen;
         private MotionHandle _autoLineClearDamageCountMotionHandle;
         private MotionHandle _autoLineClearDamagePunchMotionHandle;
+        private MotionHandle _autoLineClearDamageImpactMotionHandle;
         private bool _startingUniqueTutorialShownThisRun;
         private bool _postStartingUniqueBattleTutorialShownThisRun;
         private bool _shopTutorialShownThisRun;
@@ -819,7 +837,7 @@ namespace Mathcalibur.Battle
         private bool TryOpenTutorialPage(int pageIndex)
         {
             ResolveTutorialPanelController();
-            if (tutorialPanelController == null)
+            if (tutorialPanelController == null || !tutorialPanelController.isActiveAndEnabled)
             {
                 return false;
             }
@@ -831,7 +849,7 @@ namespace Mathcalibur.Battle
         private bool TryOpenTutorialRange(int startIndex, int endIndex)
         {
             ResolveTutorialPanelController();
-            if (tutorialPanelController == null)
+            if (tutorialPanelController == null || !tutorialPanelController.isActiveAndEnabled)
             {
                 return false;
             }
@@ -3139,7 +3157,7 @@ namespace Mathcalibur.Battle
 
         private BattleTileView CreateTile(int x, int y, BoardLayoutMetrics layoutMetrics)
         {
-            var go = new GameObject($"Tile_{x}_{y}", typeof(Image), typeof(BattleTileView));
+            var go = new GameObject($"Tile_{x}_{y}", typeof(Image), typeof(CanvasGroup), typeof(BattleTileView));
             var image = go.GetComponent<Image>();
             image.raycastTarget = true;
 
@@ -4951,16 +4969,19 @@ namespace Mathcalibur.Battle
 
                 var lineTiles = FlattenLineClearGroups(lineGroups);
                 var lineDamages = CalculateAutoLineClearDamages(lineGroups);
-                foreach (var damage in lineDamages)
+                var damage = lineDamages.Sum();
+                Coroutine damageCountCoroutine = null;
+                if (damage > 0)
                 {
-                    if (damage <= 0)
-                    {
-                        continue;
-                    }
-
                     var previousDamage = _lastAutoLineClearDamage;
                     _lastAutoLineClearDamage += damage;
-                    yield return AnimateAutoLineClearDamageText(previousDamage, _lastAutoLineClearDamage);
+                    damageCountCoroutine = StartCoroutine(AnimateAutoLineClearDamageText(previousDamage, _lastAutoLineClearDamage));
+                }
+
+                yield return AnimateAutoLineClearAbsorption(lineGroups);
+                if (damageCountCoroutine != null)
+                {
+                    yield return damageCountCoroutine;
                 }
 
                 TrackEdgeNumberLineClearStreaks(lineGroups);
@@ -5068,25 +5089,50 @@ namespace Mathcalibur.Battle
         private IEnumerator PreviewAutoLineClearSequence(IEnumerable<LineClearGroup> lineGroups)
         {
             var stepDelay = config.AutoLineClearSequentialSelectionInterval;
-            if (stepDelay <= 0f)
+            var lines = BuildUniqueLineTileSequences(lineGroups);
+            var maxTileCount = lines.Count > 0 ? lines.Max(line => line.Count) : 0;
+            for (var tileIndex = 0; tileIndex < maxTileCount; tileIndex++)
             {
-                yield break;
-            }
-
-            var alreadyPreviewed = new HashSet<BattleTileView>();
-            foreach (var group in lineGroups)
-            {
-                foreach (var tile in group.Tiles)
+                foreach (var line in lines)
                 {
-                    if (tile == null || !alreadyPreviewed.Add(tile))
+                    if (tileIndex < line.Count)
                     {
-                        continue;
+                        line[tileIndex].SetSelected(true);
                     }
+                }
 
-                    tile.SetSelected(true);
+                if (tileIndex < maxTileCount - 1 && stepDelay > 0f)
+                {
                     yield return new WaitForSeconds(stepDelay);
                 }
             }
+        }
+
+        private static List<List<BattleTileView>> BuildUniqueLineTileSequences(IEnumerable<LineClearGroup> lineGroups)
+        {
+            var reservedTiles = new HashSet<BattleTileView>();
+            var lines = new List<List<BattleTileView>>();
+            var horizontalFirst = lineGroups
+                .OrderBy(group => group.Direction == LineClearDirection.Horizontal ? 0 : 1);
+
+            foreach (var group in horizontalFirst)
+            {
+                var line = new List<BattleTileView>();
+                foreach (var tile in group.Tiles)
+                {
+                    if (tile != null && reservedTiles.Add(tile))
+                    {
+                        line.Add(tile);
+                    }
+                }
+
+                if (line.Count > 0)
+                {
+                    lines.Add(line);
+                }
+            }
+
+            return lines;
         }
 
         private List<int> CalculateAutoLineClearDamages(IEnumerable<LineClearGroup> lineGroups)
@@ -5102,6 +5148,83 @@ namespace Mathcalibur.Battle
             }
 
             return damages;
+        }
+
+        private IEnumerator AnimateAutoLineClearAbsorption(IEnumerable<LineClearGroup> lineGroups)
+        {
+            if (autoLineClearDamageBackgroundImage == null)
+            {
+                yield break;
+            }
+
+            SetAutoLineClearDamagePanelVisible(true);
+            var targetPosition = autoLineClearDamageBackgroundImage.rectTransform.position;
+            var duration = Mathf.Max(0f, autoLineClearAbsorbDuration);
+            var startInterval = Mathf.Max(0f, autoLineClearAbsorbStartInterval);
+            var lines = BuildUniqueLineTileSequences(lineGroups);
+
+            var maxTileCount = lines.Count > 0 ? lines.Max(line => line.Count) : 0;
+            for (var tileIndex = 0; tileIndex < maxTileCount; tileIndex++)
+            {
+                foreach (var line in lines)
+                {
+                    if (tileIndex < line.Count)
+                    {
+                        StartAutoLineClearTileAbsorption(line[tileIndex], targetPosition, duration);
+                    }
+                }
+
+                if (tileIndex < maxTileCount - 1 && startInterval > 0f)
+                {
+                    yield return new WaitForSeconds(startInterval);
+                }
+            }
+
+            if (duration > 0f)
+            {
+                yield return new WaitForSeconds(duration);
+            }
+        }
+
+        private void StartAutoLineClearTileAbsorption(BattleTileView tile, Vector3 targetPosition, float duration)
+        {
+            if (tile == null)
+            {
+                return;
+            }
+
+            var tileTransform = tile.transform;
+            var startPosition = tileTransform.position;
+            var startScale = tileTransform.localScale;
+            var canvasGroup = tile.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+            {
+                Debug.LogError($"CanvasGroup is missing from generated battle tile '{tile.name}'.");
+                return;
+            }
+
+            if (duration <= 0f)
+            {
+                tileTransform.position = targetPosition;
+                tileTransform.localScale = Vector3.zero;
+                canvasGroup.alpha = 0f;
+                return;
+            }
+
+            LMotion.Create(0f, 1f, duration)
+                .WithEase(Ease.InOutQuad)
+                .Bind(progress =>
+                {
+                    if (tile == null || canvasGroup == null)
+                    {
+                        return;
+                    }
+
+                    tileTransform.position = Vector3.LerpUnclamped(startPosition, targetPosition, progress);
+                    tileTransform.localScale = Vector3.LerpUnclamped(startScale, Vector3.zero, progress);
+                    canvasGroup.alpha = 1f - progress;
+                })
+                .AddTo(tile);
         }
 
         private int CalculateAutoLineClearDamage(LineClearGroup group)
@@ -5139,6 +5262,8 @@ namespace Mathcalibur.Battle
                 ResetAutoLineClearDamagePresentation();
                 yield break;
             }
+
+            yield return PlayAutoLineClearDamageImpactFlight();
 
             _enemyHp = Mathf.Max(0, _enemyHp - _lastAutoLineClearDamage);
             RefreshHud(string.Empty, "-");
@@ -5181,6 +5306,7 @@ namespace Mathcalibur.Battle
             }
 
             _autoLineClearDamageCountMotionHandle = LMotion.Create((float)from, to, duration)
+                .WithEase(Ease.InOutQuad)
                 .Bind(value => autoLineClearDamageText.text = Mathf.RoundToInt(value).ToString())
                 .AddTo(this);
             yield return new WaitForSeconds(duration);
@@ -5204,6 +5330,47 @@ namespace Mathcalibur.Battle
             rect.localScale = baseScale;
         }
 
+        private IEnumerator PlayAutoLineClearDamageImpactFlight()
+        {
+            if (autoLineClearDamageBackgroundImage == null || autoLineClearDamageImpactTarget == null)
+            {
+                yield break;
+            }
+
+            CancelAutoLineClearDamageImpactMotion();
+            var rect = autoLineClearDamageBackgroundImage.rectTransform;
+            var startPosition = rect.position;
+            var startScale = rect.localScale;
+            var startColor = autoLineClearDamageBackgroundImage.color;
+            var targetPosition = autoLineClearDamageImpactTarget.position;
+            var duration = Mathf.Max(0f, autoLineClearDamageImpactDuration);
+
+            if (duration <= 0f)
+            {
+                rect.position = targetPosition;
+            }
+            else
+            {
+                _autoLineClearDamageImpactMotionHandle = LMotion.Create(0f, 1f, duration)
+                    .WithEase(Ease.OutBounce)
+                    .Bind(progress =>
+                    {
+                        rect.position = Vector3.LerpUnclamped(startPosition, targetPosition, progress);
+                        rect.localScale = Vector3.LerpUnclamped(startScale, Vector3.zero, progress);
+                        var color = startColor;
+                        color.a = Mathf.LerpUnclamped(startColor.a, 0f, progress);
+                        autoLineClearDamageBackgroundImage.color = color;
+                    })
+                    .AddTo(this);
+                yield return new WaitForSeconds(duration);
+            }
+
+            rect.position = startPosition;
+            rect.localScale = startScale;
+            autoLineClearDamageBackgroundImage.color = startColor;
+            autoLineClearDamageBackgroundImage.gameObject.SetActive(false);
+        }
+
         private IEnumerator WaitForAutoLineClearDamageResultDisplayOrEnemyDeath(float displayUntilTime)
         {
             while (Time.time < displayUntilTime && _enemyHp > 0)
@@ -5216,6 +5383,7 @@ namespace Mathcalibur.Battle
         {
             CancelAutoLineClearDamageCountMotion();
             CancelAutoLineClearDamagePunchMotion();
+            CancelAutoLineClearDamageImpactMotion();
             if (autoLineClearDamageText != null)
             {
                 autoLineClearDamageText.text = "0";
@@ -5226,9 +5394,35 @@ namespace Mathcalibur.Battle
 
         private void SetAutoLineClearDamagePanelVisible(bool visible)
         {
+            if (autoLineClearDamageBackgroundImage != null)
+            {
+                if (visible)
+                {
+                    autoLineClearDamageBackgroundImage.gameObject.SetActive(true);
+                }
+
+                var backgroundSprite = visible
+                    ? autoLineClearDamageActiveBackgroundSprite
+                    : autoLineClearDamageInactiveBackgroundSprite;
+                if (backgroundSprite != null)
+                {
+                    autoLineClearDamageBackgroundImage.sprite = backgroundSprite;
+                }
+            }
+
             if (autoLineClearDamagePanelRoot != null)
             {
                 autoLineClearDamagePanelRoot.SetActive(visible);
+                var panelImage = autoLineClearDamagePanelRoot.GetComponent<Image>();
+                if (panelImage != null && panelImage != autoLineClearDamageBackgroundImage)
+                {
+                    panelImage.enabled = visible;
+                }
+
+                if (autoLineClearDamageText != null)
+                {
+                    autoLineClearDamageText.gameObject.SetActive(visible);
+                }
             }
             else if (autoLineClearDamageText != null)
             {
@@ -5249,6 +5443,14 @@ namespace Mathcalibur.Battle
             if (_autoLineClearDamagePunchMotionHandle.IsActive())
             {
                 _autoLineClearDamagePunchMotionHandle.Cancel();
+            }
+        }
+
+        private void CancelAutoLineClearDamageImpactMotion()
+        {
+            if (_autoLineClearDamageImpactMotionHandle.IsActive())
+            {
+                _autoLineClearDamageImpactMotionHandle.Cancel();
             }
         }
 
