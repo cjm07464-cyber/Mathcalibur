@@ -582,7 +582,8 @@ namespace Mathcalibur.Battle
         private void EnsureUiExists()
         {
             var canvas = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
-                .FirstOrDefault(candidate => candidate != null && candidate.GetComponentInParent<SceneTransitionFader>() == null);
+                .FirstOrDefault(candidate => candidate != null && candidate.GetComponentInParent<SceneTransitionFader>() == null
+                    && candidate.GetComponentInParent<StandaloneResolutionSetter>() == null);
 
             if (canvas == null)
             {
