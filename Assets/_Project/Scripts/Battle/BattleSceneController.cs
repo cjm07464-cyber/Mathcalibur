@@ -289,7 +289,6 @@ namespace Mathcalibur.Battle
         private Vector2? _percentagePanelNormalizedPosition;
         private Vector2? _percentageButtonRightAnchoredPosition;
         private Vector2? _percentagePanelRightAnchoredPosition;
-        private Vector2? _boardPanelNormalizedPosition;
         private readonly Dictionary<RectTransform, Vector2> _percentageBarBaseSizes = new();
         private bool _freePurchaseDone;
         private bool _isResolvingTurn;
@@ -581,9 +580,16 @@ namespace Mathcalibur.Battle
 
         private void EnsureUiExists()
         {
-            var canvas = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
-                .FirstOrDefault(candidate => candidate != null && candidate.GetComponentInParent<SceneTransitionFader>() == null
-                    && candidate.GetComponentInParent<StandaloneResolutionSetter>() == null);
+            _boardLayoutReference = FindAnyObjectByType<BattleBoardLayoutReference>();
+            var panelCanvas = _boardLayoutReference != null && _boardLayoutReference.TilePanel != null
+                ? _boardLayoutReference.TilePanel.GetComponentInParent<Canvas>()
+                : null;
+            var canvas = panelCanvas != null ? panelCanvas.rootCanvas
+                : FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+                    .FirstOrDefault(candidate => candidate != null && candidate.isRootCanvas
+                        && candidate.renderMode == RenderMode.ScreenSpaceOverlay
+                        && candidate.GetComponentInParent<SceneTransitionFader>() == null
+                        && candidate.GetComponentInParent<StandaloneResolutionSetter>() == null);
 
             if (canvas == null)
             {
@@ -610,7 +616,7 @@ namespace Mathcalibur.Battle
                 _cameraOriginalLocalRotation = _shakeCamera.transform.localRotation;
             }
 
-            BuildHudAndBoardRoots(canvas.transform as RectTransform);
+            BuildHudAndBoardRoots(StandaloneResolutionSetter.GetContentRoot(canvas));
         }
 
         private void BuildHudAndBoardRoots(RectTransform canvasRoot)
@@ -2455,11 +2461,6 @@ namespace Mathcalibur.Battle
             ApplyNormalizedPivotPosition(_bagButton != null ? _bagButton.transform as RectTransform : null, topOverlayParent, NudgeNormalizedX(_bagButtonNormalizedPosition, BagResponsiveOffsetX));
             ApplyNormalizedPivotPosition(_percentageButton != null ? _percentageButton.transform as RectTransform : null, topOverlayParent, NudgeNormalizedX(_percentageButtonNormalizedPosition, PercentageResponsiveOffsetX));
 
-            if (_tileLayoutRoot != null && _tileLayoutRoot != _boardRoot)
-            {
-                ApplyNormalizedPivotPosition(_tileLayoutRoot, topOverlayParent, _boardPanelNormalizedPosition);
-            }
-
             if (IsBagPanelOpen())
             {
                 ApplyNormalizedPivotPosition(_bagPanelRoot, topOverlayParent, NudgeNormalizedX(_bagPanelNormalizedPosition, BagResponsiveOffsetX));
@@ -2765,10 +2766,6 @@ namespace Mathcalibur.Battle
             Canvas.ForceUpdateCanvases();
             var boardHeight = _boardContainer.gameObject.activeSelf ? _boardContainer.rect.height : 0f;
             _boardContainer.anchoredPosition = Vector2.zero;
-            if (_tileLayoutRoot != null && _tileLayoutRoot != _boardRoot)
-            {
-                ApplyNormalizedPivotPosition(_tileLayoutRoot, GetTopOverlayParent(), _boardPanelNormalizedPosition);
-            }
             _gameplayContainer.anchorMin = new Vector2(0f, 0f);
             _gameplayContainer.anchorMax = new Vector2(1f, 1f);
             _gameplayContainer.pivot = new Vector2(0.5f, 0.5f);
@@ -5705,11 +5702,8 @@ namespace Mathcalibur.Battle
                 ? _boardLayoutReference.TilePanel
                 : _boardRoot;
 
-            if (_tileLayoutRoot != null && _tileLayoutRoot != _boardRoot)
-            {
-                _boardPanelNormalizedPosition = CaptureNormalizedPivotPosition(_tileLayoutRoot, GetTopOverlayParent());
-                ApplyNormalizedPivotPosition(_tileLayoutRoot, GetTopOverlayParent(), _boardPanelNormalizedPosition);
-            }
+            // The scene-authored panel owns its anchors and position. Reapplying a
+            // Canvas-relative pivot after portrait viewport reparenting moves the board.
 
             if (_boardContainer != null)
             {
